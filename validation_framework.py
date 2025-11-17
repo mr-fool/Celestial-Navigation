@@ -339,8 +339,8 @@ class CelestialNavigationValidator:
             if attitude_errors:
                 mean_error = statistics.mean(attitude_errors)
                 error_ci = self.calculate_confidence_intervals(attitude_errors)
-                report.append(f"Mean Attitude Error: {mean_error:.3f}°")
-                report.append(f"95% CI Attitude Error: [{error_ci[0]:.3f}°, {error_ci[1]:.3f}°]")
+                report.append(f"Mean Attitude Error: {mean_error:.3f} degree")
+                report.append(f"95% CI Attitude Error: [{error_ci[0]:.3f} degree, {error_ci[1]:.3f} degree]")
         
         # Scenario-wise breakdown
         report.append("")
@@ -353,7 +353,7 @@ class CelestialNavigationValidator:
                 scenario_stats = self.analyze_scenario_performance(scenario_results)
                 report.append(f"\n{scenario}:")
                 report.append(f"  Success Rate: {scenario_stats['success_rate_percent']:.1f}%")
-                report.append(f"  Mean Attitude Error: {scenario_stats['mean_attitude_error_deg']:.3f}°")
+                report.append(f"  Mean Attitude Error: {scenario_stats['mean_attitude_error_deg']:.3f} degree")
                 report.append(f"  Mean Computation Time: {scenario_stats['mean_computation_time_ms']:.2f} ms")
                 report.append(f"  Mean Confidence: {scenario_stats['mean_confidence_score']:.3f}")
         
@@ -370,7 +370,7 @@ if __name__ == "__main__":
     
     # Calculate error
     error = validator.calculate_attitude_error(true_attitude, estimated_attitude)
-    print(f"Perfect estimation error: {error.total_rms_error:.6f}°")
+    print(f"Perfect estimation error: {error.total_rms_error:.6f} degree")
     
     # Example with small error
     small_error_matrix = np.array([
@@ -379,7 +379,7 @@ if __name__ == "__main__":
         [-0.0087, 0.0015, 0.9999]
     ])
     error = validator.calculate_attitude_error(true_attitude, small_error_matrix)
-    print(f"Small error estimation: {error.total_rms_error:.3f}°")
+    print(f"Small error estimation: {error.total_rms_error:.3f} degree")
     
     # Test confidence intervals
     sample_errors = [0.1, 0.15, 0.12, 0.18, 0.11]

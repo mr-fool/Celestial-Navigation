@@ -3,11 +3,11 @@ MONTE CARLO SIMULATION REPORT
 Celestial Navigation Progressive Strategy for Military Vehicles
 ======================================================================
 
-DATE: 2025-11-16 22:59:56
+DATE: 2025-11-16 23:42:36
 Total Trials: 6000
 Catalog Size: 535 stars
 Match Tolerance: 15.0 arcsec
-Overall Success Rate: 74.2%
+Overall Success Rate: 73.7%
 
 ======================================================================
 ALGORITHM LOGIC SUMMARY
@@ -33,75 +33,75 @@ ALGORITHM PERFORMANCE BY OPERATIONAL SCENARIO
 SCENARIO: Optimal_WideField
   Description: Optimal conditions - clear sky, wide FOV (Max Performance)
   Overall Success Rate: 100.0%
-  Avg Computation Time: 3.282 ms
+  Avg Computation Time: 3.511 ms
   Algorithm Distribution (% of total trials):
-    - Pyramid     :  71.1%
-    - Liebe       :  14.5%
-    - Voting      :  14.4%
+    - Pyramid     :  77.7%
+    - Liebe       :  12.9%
+    - Voting      :   9.4%
 
 SCENARIO: Clear_Rural_Base
   Description: Baseline clear night in rural/desert environment (Low Noise)
-  Overall Success Rate: 98.8%
-  Avg Computation Time: 1.837 ms
+  Overall Success Rate: 98.1%
+  Avg Computation Time: 1.983 ms
   Algorithm Distribution (% of total trials):
-    - Pyramid     :  76.5%
-    - Liebe       :  12.4%
-    - Voting      :   9.9%
-    - Failed      :   1.2%
+    - Pyramid     :  74.2%
+    - Voting      :  12.1%
+    - Liebe       :  11.8%
+    - Failed      :   1.9%
 
 SCENARIO: Vehicle_Motion_Extreme
   Description: Moving vehicle with severe vibration and motion blur (Extreme Noise)
-  Overall Success Rate: 92.8%
-  Avg Computation Time: 1.344 ms
+  Overall Success Rate: 93.0%
+  Avg Computation Time: 1.333 ms
   Algorithm Distribution (% of total trials):
-    - Pyramid     :  75.5%
-    - Voting      :   9.8%
-    - Liebe       :   7.5%
-    - Failed      :   7.2%
+    - Pyramid     :  73.3%
+    - Voting      :  11.3%
+    - Liebe       :   8.4%
+    - Failed      :   7.0%
 
 SCENARIO: Dust_Storm_HighNoise
   Description: Dust/sand storm reducing visibility (High Measurement Noise)
-  Overall Success Rate: 80.2%
-  Avg Computation Time: 0.985 ms
+  Overall Success Rate: 78.3%
+  Avg Computation Time: 0.981 ms
   Algorithm Distribution (% of total trials):
-    - Pyramid     :  67.4%
-    - Failed      :  19.8%
-    - Voting      :   8.8%
-    - Liebe       :   4.0%
+    - Pyramid     :  63.7%
+    - Failed      :  21.7%
+    - Voting      :  10.8%
+    - Liebe       :   3.8%
 
 SCENARIO: Urban_Canyon_Restricted
   Description: Urban environment with buildings blocking sky (Reduced Stars, Moderate Noise)
-  Overall Success Rate: 61.5%
-  Avg Computation Time: 0.703 ms
+  Overall Success Rate: 63.1%
+  Avg Computation Time: 0.725 ms
   Algorithm Distribution (% of total trials):
-    - Pyramid     :  52.9%
-    - Failed      :  38.5%
-    - Voting      :   6.1%
-    - Liebe       :   2.5%
+    - Pyramid     :  52.4%
+    - Failed      :  36.9%
+    - Voting      :   7.4%
+    - Liebe       :   3.3%
 
 SCENARIO: Forest_Canopy_Obscured
   Description: Dense forest with partial canopy obstruction (Very Few Stars)
-  Overall Success Rate: 11.6%
-  Avg Computation Time: 0.472 ms
+  Overall Success Rate: 9.4%
+  Avg Computation Time: 0.479 ms
   Algorithm Distribution (% of total trials):
-    - Failed      :  88.4%
-    - Voting      :   8.6%
+    - Failed      :  90.6%
+    - Voting      :   6.4%
     - Liebe       :   3.0%
 
 ======================================================================
 KEY OPERATIONAL FINDINGS
 ======================================================================
 
-1. Overall System Reliability: 74.2% success rate across 6000 trials.
+1. Overall System Reliability: 73.7% success rate across 6000 trials.
 
 2. Progressive Strategy Efficacy:
-   - Primary Solver (Liebe) solved 7.3% of all trials.
-   - Fallback System (Voting + Pyramid) contributed 66.8% additional coverage.
-   - The fallback system increased overall success by 913.4% over using Liebe alone.
+   - Primary Solver (Liebe) solved 7.2% of all trials.
+   - Fallback System (Voting + Pyramid) contributed 66.5% additional coverage.
+   - The fallback system increased overall success by 922.9% over using Liebe alone.
 
 3. Environmental Degradation:
    - Best Case (Optimal_WideField): Performance at 100.0% success.
-   - Worst Case (Forest_Canopy_Obscured): Performance drops to 11.6% success.
+   - Worst Case (Forest_Canopy_Obscured): Performance drops to 9.4% success.
    - High Noise (e.g., Dust Storm) primarily triggers the Geometric Voting algorithm due to its inherent resilience to positional jitter.
    - Low Star Count (e.g., Forest Canopy) results in the highest failure rate, as Voting and Pyramid require a sufficient number of features.
 
@@ -115,50 +115,50 @@ Scenarios: Clear_Rural_Base, Urban_Canyon_Restricted, Forest_Canopy_Obscured, Du
 
 OVERALL PERFORMANCE
 ------------------------------
-Success Rate: 74.2%
-Successful Trials: 4449
-Failed Trials: 1551
-Mean Attitude Error: 0.538°
-95% CI Attitude Error: [0.524°, 0.552°]
+Success Rate: 73.7%
+Successful Trials: 4419
+Failed Trials: 1581
+Mean Attitude Error: 0.540 degree
+95% CI Attitude Error: [0.526 degree, 0.553 degree]
 
 SCENARIO-WISE PERFORMANCE
 ------------------------------
 
 Clear_Rural_Base:
-  Success Rate: 98.8%
-  Mean Attitude Error: 0.240°
-  Mean Computation Time: 1.84 ms
+  Success Rate: 98.1%
+  Mean Attitude Error: 0.241 degree
+  Mean Computation Time: 1.98 ms
   Mean Confidence: 0.827
 
 Urban_Canyon_Restricted:
-  Success Rate: 61.5%
-  Mean Attitude Error: 0.612°
-  Mean Computation Time: 0.70 ms
-  Mean Confidence: 0.667
+  Success Rate: 63.1%
+  Mean Attitude Error: 0.586 degree
+  Mean Computation Time: 0.72 ms
+  Mean Confidence: 0.668
 
 Forest_Canopy_Obscured:
-  Success Rate: 11.6%
-  Mean Attitude Error: 0.543°
-  Mean Computation Time: 0.47 ms
+  Success Rate: 9.4%
+  Mean Attitude Error: 0.667 degree
+  Mean Computation Time: 0.48 ms
   Mean Confidence: 0.590
 
 Dust_Storm_HighNoise:
-  Success Rate: 80.2%
-  Mean Attitude Error: 0.821°
+  Success Rate: 78.3%
+  Mean Attitude Error: 0.838 degree
   Mean Computation Time: 0.98 ms
   Mean Confidence: 0.742
 
 Optimal_WideField:
   Success Rate: 100.0%
-  Mean Attitude Error: 0.131°
-  Mean Computation Time: 3.28 ms
-  Mean Confidence: 0.836
+  Mean Attitude Error: 0.132 degree
+  Mean Computation Time: 3.51 ms
+  Mean Confidence: 0.835
 
 Vehicle_Motion_Extreme:
-  Success Rate: 92.8%
-  Mean Attitude Error: 1.000°
-  Mean Computation Time: 1.34 ms
-  Mean Confidence: 0.813
+  Success Rate: 93.0%
+  Mean Attitude Error: 0.997 degree
+  Mean Computation Time: 1.33 ms
+  Mean Confidence: 0.816
 ======================================================================
-END OF REPORT. File saved: results/monte_carlo_results_1000_trials_20251116_225956.txt
+END OF REPORT. File saved: results/monte_carlo_results_1000_trials_20251116_234236.txt
 ======================================================================

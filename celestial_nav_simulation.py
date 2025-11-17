@@ -4,6 +4,7 @@ import time
 import statistics
 import os
 import numpy as np
+import scipy.stats as stats  # For confidence interval calculation
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
@@ -311,6 +312,7 @@ def liebe_triangle_match(observed_stars: List[Dict],
 def generate_simulated_attitude(observed_stars: List[Dict], success: bool, noise_level: float = 1.0) -> Tuple[Any, Any]:
     """
     Generate simulated true and estimated attitude matrices with realistic errors.
+    Returns: (true_attitude, estimated_attitude) - let validation framework calculate error
     """
     if not success:
         return None, None
@@ -340,7 +342,21 @@ def generate_simulated_attitude(observed_stars: List[Dict], success: bool, noise
     
     estimated_attitude = np.dot(error_rotation, true_attitude)
     
-    return true_attitude, estimated_attitude
+    return true_attitude, estimated_attitude  # Return only 2 values as validation framework expects
+
+def calculate_confidence_interval(data: List[float], confidence: float = 0.95) -> Tuple[float, float]:
+    """
+    Calculate confidence interval for a dataset.
+    """
+    if len(data) < 2:
+        return (data[0], data[0]) if data else (0.0, 0.0)
+    
+    mean = np.mean(data)
+    sem = stats.sem(data)  # Standard error of the mean
+    ci = sem * stats.t.ppf((1 + confidence) / 2., len(data) - 1)
+    
+    return (mean - ci, mean + ci)
+
 
 def geometric_voting_match(observed_stars: List[Dict], 
                           catalog_index: Dict[int, List[Tuple[int, int]]],
@@ -521,13 +537,6 @@ def determine_attitude_progressively(observed_stars: List[Dict],
 def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) -> Dict[str, Any]:
     """
     Runs Monte Carlo simulation across multiple environmental scenarios.
-    
-    Args:
-        num_trials: Number of trials per scenario
-        verbose: Print detailed output for each trial
-    
-    Returns:
-        Dictionary containing comprehensive results and statistics
     """
     print(f"\n{'='*70}")
     print(f"MONTE CARLO SIMULATION: Celestial Navigation for Military Vehicles")
@@ -548,6 +557,10 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
     
     all_results: List[TrialResult] = []
     scenario_stats: Dict[str, Dict] = {}
+    
+    # Collect attitude errors for CI calculation
+    all_attitude_errors: List[float] = []
+    scenario_attitude_errors: Dict[str, List[float]] = {scenario.name: [] for scenario in OPERATIONAL_SCENARIOS}
     
     # Run trials for each scenario
     for scenario in OPERATIONAL_SCENARIOS:
@@ -576,7 +589,9 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
             computation_times.append(comp_time)
             
             # Generate simulated attitude matrices for validation
-            true_att, est_att = generate_simulated_attitude(observed_stars, success, scenario.noise_level)
+            true_att, est_att = generate_simulated_attitude(
+                observed_stars, success, scenario.noise_level
+            )
 
             # Create validation result for this trial
             validation_result = validator.validate_trial(
@@ -603,10 +618,25 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
             scenario_results.append(result)
             all_results.append(result)
         
-        # Calculate statistics for this scenario
+        # After processing all trials for this scenario, collect error metrics from validation results
+        scenario_validation_results = [r for r in all_validation_results if r.scenario_name == scenario.name and r.success and r.attitude_error]
+        scenario_errors = [r.attitude_error.total_rms_error for r in scenario_validation_results]
+        
+        # Calculate statistics for this scenario including ACTUAL attitude errors
         success_rate = (success_count / num_trials) * 100
         avg_time = statistics.mean(computation_times) if computation_times else 0
         std_time = statistics.stdev(computation_times) if len(computation_times) > 1 else 0
+        
+        # Calculate actual attitude error statistics using validation framework's data
+        mean_attitude_error = statistics.mean(scenario_errors) if scenario_errors else 0.0
+        if len(scenario_errors) > 1:
+            ci_lower, ci_upper = validator.calculate_confidence_intervals(scenario_errors)
+        else:
+            ci_lower, ci_upper = mean_attitude_error, mean_attitude_error
+        
+        # Store scenario errors for overall calculation
+        scenario_attitude_errors[scenario.name] = scenario_errors
+        all_attitude_errors.extend(scenario_errors)
         
         scenario_stats[scenario.name] = {
             'success_rate': success_rate,
@@ -614,22 +644,35 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
             'std_computation_time': std_time,
             'algorithm_distribution': dict(algorithm_counts),
             'total_trials': num_trials,
-            'description': scenario.description
+            'description': scenario.description,
+            'mean_attitude_error': mean_attitude_error,
+            'ci_95_lower': ci_lower,
+            'ci_95_upper': ci_upper,
+            'attitude_errors': scenario_errors
         }
         
-        # Print scenario summary
+        # Print scenario summary with ACTUAL error metrics
         print(f"  Results:")
         print(f"    Success Rate: {success_rate:.1f}%")
+        print(f"    Mean Attitude Error: {mean_attitude_error:.3f} degree")
+        print(f"    95% CI: [{ci_lower:.3f} degree, {ci_upper:.3f} degree]")
         print(f"    Avg Computation Time: {avg_time*1000:.3f} ms")
         print(f"    Algorithm Usage:")
         for algo, count in sorted(algorithm_counts.items(), key=lambda x: x[1], reverse=True):
             percentage = (count / num_trials) * 100
             print(f"      {algo}: {count} ({percentage:.1f}%)")
     
-    # Overall statistics
+    # Overall statistics with ACTUAL error metrics
     total_trials = len(all_results)
     overall_success = sum(1 for r in all_results if r.success)
     overall_success_rate = (overall_success / total_trials) * 100
+    
+    # Calculate overall attitude error statistics
+    overall_mean_error = statistics.mean(all_attitude_errors) if all_attitude_errors else 0.0
+    if len(all_attitude_errors) > 1:
+        overall_ci_lower, overall_ci_upper = validator.calculate_confidence_intervals(all_attitude_errors)
+    else:
+        overall_ci_lower, overall_ci_upper = overall_mean_error, overall_mean_error
     
     algorithm_totals = defaultdict(int)
     for result in all_results:
@@ -640,6 +683,8 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
     print(f"{'='*70}")
     print(f"Total Trials: {total_trials}")
     print(f"Overall Success Rate: {overall_success_rate:.1f}%")
+    print(f"Mean Attitude Error: {overall_mean_error:.3f} degree")
+    print(f"95% CI Attitude Error: [{overall_ci_lower:.3f} degree, {overall_ci_upper:.3f} degree]")
     print(f"\nAlgorithm Usage Across All Scenarios:")
     for algo, count in sorted(algorithm_totals.items(), key=lambda x: x[1], reverse=True):
         percentage = (count / total_trials) * 100
@@ -660,9 +705,12 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
         'overall_success_rate': overall_success_rate,
         'algorithm_totals': dict(algorithm_totals),
         'num_trials_per_scenario': num_trials,
-        'total_trials': total_trials
+        'total_trials': total_trials,
+        'overall_mean_error': overall_mean_error,
+        'overall_ci_lower': overall_ci_lower,
+        'overall_ci_upper': overall_ci_upper,
+        'scenario_attitude_errors': scenario_attitude_errors
     }
-
 
 def print_detailed_analysis(results: Dict[str, Any], sorted_scenarios: List[Tuple[str, Dict]]):
     """
