@@ -63,3 +63,15 @@ pip install matplotlib numpy
 ## Usage
 
 ### Running the Simulation
+
+Execute the main simulation to generate Monte Carlo results:
+```bash
+python celestial_nav_simulation.py
+```
+This will:
+
+- Run 1000 trials for each of 6 operational scenarios
+
+- Generate comprehensive performance statistics
+
+- Save detailed results to timestamped files in results/ directory
