@@ -45,7 +45,7 @@ celestial_navigation/
 
 ### Simulation Parameters
 
-- **Star Catalog**: Expanded mock Tycho-2 catalog (50 stars)
+- **Star Catalog**: Tycho-2 catalog
 - **Match Tolerance**: 15 arcseconds
 - **Field of View**: 8-30 degrees (scenario-dependent)
 - **Noise Levels**: 0.8x to 3.5x baseline measurement error
