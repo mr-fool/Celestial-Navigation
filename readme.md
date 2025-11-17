@@ -74,12 +74,12 @@ This will:
 
 - Generate comprehensive performance statistics
 
-- Save detailed results to timestamped files in results/ directory
+- Save detailed results to timestamped files in `results/` directory
 
 ## Output Files
 
 ### Simulation Results
-- results/monte_carlo_results_[trials]_[timestamp].txt: Detailed statistical analysis including success rates, algorithm performance, and environmental impact assessment
+- `results/monte_carlo_results_[trials]_[timestamp].txt`: Detailed statistical analysis including success rates, algorithm performance, and environmental impact assessment
 
 ## Visualization Outputs
 - `fig1_success_rates.png`: Bar chart of success rates across scenarios
@@ -88,3 +88,30 @@ This will:
 - `fig4_sensor_layout.png`: Technical diagram of vehicle-mounted sensor configuration
 
 ## Key Findings
+The simulation demonstrates:
+- **Progressive Strategy Effectiveness**: Fallback algorithms provide significant additional coverage beyond primary methods
+- **Environmental Resilience**: System maintains functionality across diverse military operational environments
+- **Computational Efficiency**: All algorithms complete within milliseconds, suitable for real-time vehicle applications
+- **Operational Viability**: Overall system success rates support practical military implementation
+
+## Military Applications
+- GPS-denied navigation for convoy operations
+- Backup positioning in electronic warfare environments
+- Autonomous vehicle navigation in contested areas
+- Special operations in denied territories
+
+## Research Significance
+
+This work contributes to:
+
+- Development of robust PNT alternatives for military vehicles
+- Understanding of celestial navigation limitations in ground applications
+- Algorithm optimization for real-time embedded systems
+- Environmental impact assessment for military operations
+
+## Future Work
+
+- Integration with inertial navigation systems
+- Machine learning enhancements for star identification
+- Real-world hardware implementation and testing
+- Extended scenarios including daytime and adverse weather operations
