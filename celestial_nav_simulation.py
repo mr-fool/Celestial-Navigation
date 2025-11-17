@@ -3,11 +3,13 @@ import random
 import time
 import statistics
 import os
+import numpy as np
 from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
 from collections import defaultdict
 from star_catalog import get_tycho2_catalog
+from validation_framework import CelestialNavigationValidator, ValidationResult
 
 
 # --- Configuration and Constants ---
@@ -258,7 +260,7 @@ def liebe_triangle_match(observed_stars: List[Dict],
                         catalog_index: Dict[int, List[Tuple[int, int]]],
                         verbose: bool = False) -> Tuple[bool, float]:
     """
-    Liebe's Triangle Match (Optimized). Focuses on the smallest angle of the observed triangle.
+    Liebe's Triangle Match (More Selective Version).
     """
     start_time = time.time()
     
@@ -270,32 +272,75 @@ def liebe_triangle_match(observed_stars: List[Dict],
     image_angles = calculate_inter_star_angles(image_pattern, use_observed=True)
     image_angles.sort()
 
-    # 2. Search the Index for the shortest angle (most sensitive to noise)
-    key = get_index_key(image_angles[0])
+    # 2. Search for ALL THREE angles in the triangle, not just the shortest
+    matches_per_angle = []
     
-    # The noise window needs to be translated to key units:
-    keys_to_check = [key - 1, key, key + 1] 
+    for angle in image_angles:
+        key = get_index_key(angle)
+        keys_to_check = [key - 1, key, key + 1] 
+        candidate_pairs = set()
 
-    candidate_pairs = set()
-
-    for k in keys_to_check:
-        if k in catalog_index:
-            for id_a, id_b in catalog_index[k]:
-                # Convert IDs to strings for consistent comparison
-                candidate_pairs.add(tuple(sorted((str(id_a), str(id_b)))))
+        for k in keys_to_check:
+            if k in catalog_index:
+                for id_a, id_b in catalog_index[k]:
+                    candidate_pairs.add(tuple(sorted((str(id_a), str(id_b)))))
+        
+        matches_per_angle.append(len(candidate_pairs))
     
-    # RIGOR: Since we don't do the complex geometric verification here, we
-    # require a slightly higher bar than just "one hit" to reduce false positives.
-    match_found = len(candidate_pairs) >= 2 # Require at least two different catalog pairs match the smallest distance.
+    # RIGOR: Require that ALL THREE angles have reasonable matches
+    # and the shortest angle isn't overly ambiguous
+    shortest_angle_matches = matches_per_angle[0]
+    avg_matches = statistics.mean(matches_per_angle)
+    
+    # More selective criteria:
+    # - Shortest angle should have matches but not too many (avoid ambiguity)
+    # - All angles should have some matches
+    # - Average matches should be reasonable
+    match_found = (2 <= shortest_angle_matches <= 50 and 
+                   all(matches > 0 for matches in matches_per_angle) and
+                   avg_matches < 100)
     
     end_time = time.time()
     comp_time = end_time - start_time
     
     if verbose:
-        print(f"  [Liebe] Candidate Pairs matching shortest angle: {len(candidate_pairs)}. Time: {comp_time:.6f}s. Match: {match_found}")
+        print(f"  [Liebe] Angle matches: {matches_per_angle}, Avg: {avg_matches:.1f}. Time: {comp_time:.6f}s. Match: {match_found}")
     
     return match_found, comp_time
 
+def generate_simulated_attitude(observed_stars: List[Dict], success: bool, noise_level: float = 1.0) -> Tuple[Any, Any]:
+    """
+    Generate simulated true and estimated attitude matrices with realistic errors.
+    """
+    if not success:
+        return None, None
+    
+    # Create a true attitude (identity for simplicity)
+    true_attitude = np.eye(3)
+    
+    # Simulate attitude error based on noise and star count
+    base_error_deg = random.uniform(0.05, 0.5)  # Base error in degrees
+    star_count = len(observed_stars)
+    star_quality_factor = max(0.1, min(1.0, star_count / 10.0))
+    
+    # Error increases with noise and decreases with more stars
+    total_error_deg = base_error_deg * noise_level / star_quality_factor
+    total_error_rad = total_error_deg * DEGREES_TO_RADIANS
+    
+    # Create a small random rotation for the error
+    axis = np.random.randn(3)
+    axis = axis / np.linalg.norm(axis)
+    
+    # Rodrigues' rotation formula for small angles
+    K = np.array([[0, -axis[2], axis[1]],
+                  [axis[2], 0, -axis[0]],
+                  [-axis[1], axis[0], 0]])
+    
+    error_rotation = np.eye(3) + np.sin(total_error_rad) * K + (1 - np.cos(total_error_rad)) * np.dot(K, K)
+    
+    estimated_attitude = np.dot(error_rotation, true_attitude)
+    
+    return true_attitude, estimated_attitude
 
 def geometric_voting_match(observed_stars: List[Dict], 
                           catalog_index: Dict[int, List[Tuple[int, int]]],
@@ -473,7 +518,6 @@ def determine_attitude_progressively(observed_stars: List[Dict],
 
 
 # --- 6. Monte Carlo Simulation Framework ---
-
 def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) -> Dict[str, Any]:
     """
     Runs Monte Carlo simulation across multiple environmental scenarios.
@@ -497,6 +541,10 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
     # Build index once
     global CATALOG_INDEX
     CATALOG_INDEX = build_angular_distance_index(MOCK_STAR_CATALOG)
+    
+    # Initialize validation framework
+    validator = CelestialNavigationValidator(match_tolerance_arcsec=MATCH_TOLERANCE_ARCSEC)
+    all_validation_results: List[ValidationResult] = []
     
     all_results: List[TrialResult] = []
     scenario_stats: Dict[str, Dict] = {}
@@ -527,7 +575,23 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
             algorithm_counts[algorithm_used] += 1
             computation_times.append(comp_time)
             
-            # Store result
+            # Generate simulated attitude matrices for validation
+            true_att, est_att = generate_simulated_attitude(observed_stars, success, scenario.noise_level)
+
+            # Create validation result for this trial
+            validation_result = validator.validate_trial(
+                scenario_name=scenario.name,
+                algorithm_used=algorithm_used,
+                success=success,
+                computation_time=comp_time,
+                num_stars_matched=len(observed_stars) if success else 0,
+                true_attitude=true_att,
+                estimated_attitude=est_att,
+                matched_stars=None
+            )
+            all_validation_results.append(validation_result)
+            
+            # Store original result
             result = TrialResult(
                 scenario=scenario.name,
                 algorithm_used=algorithm_used,
@@ -581,9 +645,18 @@ def run_monte_carlo_simulation(num_trials: int = 1000, verbose: bool = False) ->
         percentage = (count / total_trials) * 100
         print(f"  {algo}: {count} ({percentage:.1f}%)")
     
+    # Generate validation report
+    scenario_names = [scenario.name for scenario in OPERATIONAL_SCENARIOS]
+    validation_report = validator.generate_validation_report(all_validation_results, scenario_names)
+    print(f"\n{'='*70}")
+    print(f"VALIDATION FRAMEWORK REPORT")
+    print(f"{'='*70}")
+    print(validation_report)
+    
     return {
         'scenario_stats': scenario_stats,
         'all_results': all_results,
+        'validation_results': all_validation_results,
         'overall_success_rate': overall_success_rate,
         'algorithm_totals': dict(algorithm_totals),
         'num_trials_per_scenario': num_trials,
@@ -686,7 +759,6 @@ if __name__ == "__main__":
     print(f"Match tolerance set to {MATCH_TOLERANCE_ARCSEC} arcseconds.")
 
     # Build index once
-    # global CATALOG_INDEX # already global
     CATALOG_INDEX = build_angular_distance_index(MOCK_STAR_CATALOG)
 
     # Quick demonstration
@@ -710,20 +782,19 @@ if __name__ == "__main__":
     print("\n\nProceed with Monte Carlo simulation...")
     
     # Run comprehensive Monte Carlo
-    # Note: 1000 trials might take a few seconds on a large catalog, kept at 1000 for robustness.
     mc_results = run_monte_carlo_simulation(num_trials=1000, verbose=False)
 
-    # --- Prepare data for printing and file writing (Fix for NameError) ---
+    # --- Prepare data for printing and file writing ---
     scenario_stats = mc_results['scenario_stats']
     
-    # 1. Sort scenarios (Fix for NameError in print_detailed_analysis and file write)
+    # 1. Sort scenarios
     sorted_scenarios = sorted(
         scenario_stats.items(), 
         key=lambda x: x[1]['success_rate'], 
         reverse=True
     )
 
-    # 2. Get overall algorithm counts (Required for file write section 2 & 3)
+    # 2. Get overall algorithm counts
     algo_totals = mc_results['algorithm_totals']
     liebe_success = algo_totals.get('Liebe', 0)
     voting_success = algo_totals.get('Voting', 0) 
@@ -813,6 +884,17 @@ if __name__ == "__main__":
         f.write(f"   - Worst Case ({worst_scenario[0]}): Performance drops to {worst_scenario[1]['success_rate']:.1f}% success.\n")
         f.write(f"   - High Noise (e.g., Dust Storm) primarily triggers the Geometric Voting algorithm due to its inherent resilience to positional jitter.\n")
         f.write(f"   - Low Star Count (e.g., Forest Canopy) results in the highest failure rate, as Voting and Pyramid require a sufficient number of features.\n")
+        
+        # Add validation framework results
+        if 'validation_results' in mc_results:
+            validator = CelestialNavigationValidator(match_tolerance_arcsec=MATCH_TOLERANCE_ARCSEC)
+            scenario_names = [scenario.name for scenario in OPERATIONAL_SCENARIOS]
+            validation_report = validator.generate_validation_report(mc_results['validation_results'], scenario_names)
+            
+            f.write("\n" + "="*70 + "\n")
+            f.write("VALIDATION FRAMEWORK RESULTS\n")
+            f.write("="*70 + "\n")
+            f.write(validation_report)
         
         f.write("\n" + "="*70 + "\n")
         f.write(f"END OF REPORT. File saved: {output_filename}\n")

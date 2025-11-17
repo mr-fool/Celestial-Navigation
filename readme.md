@@ -20,6 +20,8 @@ Modern military operations face increasing vulnerabilities from GPS jamming and 
 ```
 celestial_navigation/
 ├── celestial_nav_simulation.py # Main simulation engine
+├── star_catalog.py # Tycho-2 star catalog implementation
+├── validation_framework.py # Performance validation and error analysis
 ├── visualize.py # Figure generation for paper
 ├── figures/ # Generated visualization outputs
 ├── results/ # Monte Carlo simulation reports
@@ -30,25 +32,27 @@ celestial_navigation/
 
 ### Core Algorithms
 
-1. **Liebe's Triangle Algorithm** - Fastest method using minimal star patterns
-2. **Geometric Voting** - Robust approach with pattern consistency verification  
-3. **Pyramid Algorithm** - Most reliable lost-in-space solution with redundancy
+1. **Liebe's Triangle Algorithm** - Fastest method using minimal star patterns (3+ stars)
+2. **Geometric Voting** - Robust approach with pattern consistency verification and 75% vote threshold
+3. **Pyramid Algorithm** - Most reliable lost-in-space solution with redundancy (4+ stars)
 
 ### Operational Scenarios
 
-- Optimal WideField (Baseline performance)
-- Clear Rural Base (Standard conditions)
-- Urban Canyon Restricted (Building obstructions)
-- Forest Canopy Obscured (Limited sky visibility)
-- Dust Storm HighNoise (Atmospheric degradation)
-- Vehicle Motion Extreme (Vibration and motion blur)
+
+- **Optimal_WideField** - Clear sky, wide FOV (30°), 10 stars, low noise (0.8x)
+- **Clear_Rural_Base** - Rural/desert environment (20° FOV), 7 stars, baseline noise (1.0x)
+- **Urban_Canyon_Restricted** - Building obstructions (10° FOV), 4 stars, moderate noise (1.5x)
+- **Forest_Canopy_Obscured** - Canopy obstruction (8° FOV), 3 stars, low-moderate noise (1.2x)
+- **Dust_Storm_HighNoise** - Atmospheric degradation (12° FOV), 5 stars, high noise (2.5x)
+- **Vehicle_Motion_Extreme** - Vibration/motion blur (15° FOV), 6 stars, extreme noise (3.5x)
 
 ### Simulation Parameters
 
-- **Star Catalog**: Tycho-2 catalog
+- **Star Catalog**: Tycho-2 catalog with 535 stars
 - **Match Tolerance**: 15 arcseconds
 - **Field of View**: 8-30 degrees (scenario-dependent)
 - **Noise Levels**: 0.8x to 3.5x baseline measurement error
+- **Obscuration Probability**: 5-50% sky obstruction
 
 ## Requirements
 
