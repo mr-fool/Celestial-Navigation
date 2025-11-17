@@ -1,0 +1,61 @@
+# Celestial Navigation for Military Vehicles
+
+## Project Overview
+
+This project simulates and analyzes the performance of celestial navigation systems for military ground vehicles in GPS-denied environments. The research focuses on developing and testing progressive star identification algorithms suitable for vehicle-mounted camera systems operating under various military operational scenarios.
+
+## Research Context
+
+Modern military operations face increasing vulnerabilities from GPS jamming and spoofing. This research addresses the critical need for alternative Position, Navigation, and Timing (PNT) systems by investigating celestial navigation techniques adapted for military truck platforms. The simulation models real-world environmental challenges including urban canyons, forest obstructions, dust storms, and vehicle motion.
+
+## Key Features
+
+- **Monte Carlo Simulation**: 1000 trials per operational scenario (6000 total trials)
+- **Progressive Algorithm Strategy**: Three-tiered approach (Liebe → Voting → Pyramid)
+- **Military Operational Scenarios**: Six realistic environmental conditions
+- **Performance Metrics**: Success rates, computation times, algorithm effectiveness
+- **Visual Analysis**: Four comprehensive figures for research publication
+
+## File Structure
+```
+celestial_navigation/
+├── celestial_nav_simulation.py # Main simulation engine
+├── visualize.py # Figure generation for paper
+├── figures/ # Generated visualization outputs
+├── results/ # Monte Carlo simulation reports
+└── README.md
+```
+
+## Technical Implementation
+
+### Core Algorithms
+
+1. **Liebe's Triangle Algorithm** - Fastest method using minimal star patterns
+2. **Geometric Voting** - Robust approach with pattern consistency verification  
+3. **Pyramid Algorithm** - Most reliable lost-in-space solution with redundancy
+
+### Operational Scenarios
+
+- Optimal WideField (Baseline performance)
+- Clear Rural Base (Standard conditions)
+- Urban Canyon Restricted (Building obstructions)
+- Forest Canopy Obscured (Limited sky visibility)
+- Dust Storm HighNoise (Atmospheric degradation)
+- Vehicle Motion Extreme (Vibration and motion blur)
+
+### Simulation Parameters
+
+- **Star Catalog**: Expanded mock Tycho-2 catalog (50 stars)
+- **Match Tolerance**: 15 arcseconds
+- **Field of View**: 8-30 degrees (scenario-dependent)
+- **Noise Levels**: 0.8x to 3.5x baseline measurement error
+
+## Requirements
+
+- Python 3.7+
+- matplotlib
+- numpy
+
+Install dependencies:
+```bash
+pip install matplotlib numpy
