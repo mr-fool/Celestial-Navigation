@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
 from collections import defaultdict
+from star_catalog import get_tycho2_catalog
+
 
 # --- Configuration and Constants ---
 # Increased tolerance for more realistic failure in high-noise scenarios
@@ -96,6 +98,7 @@ class TrialResult:
 # --- 1. Mock Tycho-2 Star Catalog (Expanded to 50 Stars) ---
 
 # Core 15 bright stars for seed
+'''
 MOCK_STAR_CATALOG: List[Dict] = [
     {"ID": 1, "NAME": "Polaris", "RA": 2.520, "DEC": 89.26, "MAG": 2.02, "BRIGHTNESS": 1.0},
     {"ID": 2, "NAME": "Vega", "RA": 18.636, "DEC": 38.78, "MAG": 0.03, "BRIGHTNESS": 1.0},
@@ -112,7 +115,9 @@ MOCK_STAR_CATALOG: List[Dict] = [
     {"ID": 13, "NAME": "Antares", "RA": 16.490, "DEC": -26.43, "MAG": 0.96, "BRIGHTNESS": 0.83},
     {"ID": 14, "NAME": "Altair", "RA": 19.846, "DEC": 8.87, "MAG": 0.77, "BRIGHTNESS": 0.85},
     {"ID": 15, "NAME": "Sirius", "RA": 6.752, "DEC": -16.72, "MAG": -1.46, "BRIGHTNESS": 1.0},
-]
+]'''
+# New Tycho-2 catalog  
+MOCK_STAR_CATALOG = get_tycho2_catalog()
 
 # Generate additional dimmer stars to reach 50
 for i in range(16, 51):
@@ -266,13 +271,9 @@ def liebe_triangle_match(observed_stars: List[Dict],
     image_angles.sort()
 
     # 2. Search the Index for the shortest angle (most sensitive to noise)
-    # Using the shortest angle is key for quick rejection/acceptance
     key = get_index_key(image_angles[0])
     
     # The noise window needs to be translated to key units:
-    # Match Tolerance (15.0 arcsec) / Index Precision (0.1 deg * 3600 arcsec/deg) = 15.0 / 360 = ~0.04
-    # The index key is based on the angle itself. A deviation of 1 key unit means 0.1 degree error.
-    # The actual geometric error is much smaller. A window of [-1, 0, 1] key units is used.
     keys_to_check = [key - 1, key, key + 1] 
 
     candidate_pairs = set()
@@ -280,7 +281,8 @@ def liebe_triangle_match(observed_stars: List[Dict],
     for k in keys_to_check:
         if k in catalog_index:
             for id_a, id_b in catalog_index[k]:
-                candidate_pairs.add(tuple(sorted((id_a, id_b))))
+                # Convert IDs to strings for consistent comparison
+                candidate_pairs.add(tuple(sorted((str(id_a), str(id_b)))))
     
     # RIGOR: Since we don't do the complex geometric verification here, we
     # require a slightly higher bar than just "one hit" to reduce false positives.
