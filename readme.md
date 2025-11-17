@@ -75,3 +75,16 @@ This will:
 - Generate comprehensive performance statistics
 
 - Save detailed results to timestamped files in results/ directory
+
+## Output Files
+
+### Simulation Results
+- results/monte_carlo_results_[trials]_[timestamp].txt: Detailed statistical analysis including success rates, algorithm performance, and environmental impact assessment
+
+## Visualization Outputs
+- fig1_success_rates.png: Bar chart of success rates across scenarios
+- fig2_algorithm_performance.png: Stacked bar chart showing progressive strategy effectiveness
+- fig3_environmental_analysis.png: Multi-panel analysis of noise, star availability, and computation time impacts
+- fig4_sensor_layout.png: Technical diagram of vehicle-mounted sensor configuration
+
+## Key Findings
