@@ -1,646 +1,552 @@
 """
-Visualization Script for Celestial Navigation Monte Carlo Results
-Generates publication-ready figures for Military Review paper
-ASCII characters only for cross-platform compatibility
+Script to generate 4 diagrams for the Celestial Navigation Military Review Paper:
+- Figure 1: Monte Carlo Success Rates by Operational Scenario
+- Figure 2: Algorithm Performance and Fallback Strategy Analysis
+- Figure 3: Environmental Degradation Impact Analysis
+- Figure 4: Celestial Navigation Sensor Layout Diagram
 """
 
-import sys
 import os
-from datetime import datetime
+import matplotlib
+import sys
 import importlib.util
+import numpy as np
+from typing import Dict, Any, List, Tuple
 
-# Import the simulation module dynamically
-def import_simulation_module(filepath):
-    """Import the celestial navigation simulation module"""
-    spec = importlib.util.spec_from_file_location("celestial_nav", filepath)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-# Check if matplotlib is available
+# Use 'Agg' backend for non-interactive environments
 try:
-    import matplotlib
-    matplotlib.use('Agg')  # Non-interactive backend
+    matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    import matplotlib.patches as mpatches
-    from matplotlib.gridspec import GridSpec
+    import matplotlib.patches as patches
+    from matplotlib.patches import FancyBboxPatch
+    import matplotlib.gridspec as gridspec
     MATPLOTLIB_AVAILABLE = True
+    plt.style.use('seaborn-v0_8-whitegrid')
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
     print("WARNING: matplotlib not available. Install with: pip install matplotlib")
-    print("Continuing with ASCII-based visualizations only...")
+    sys.exit(1)
 
-import numpy as np
+# Function to import simulation module
+def import_simulation_module(filepath):
+    """Import the celestial navigation simulation module dynamically"""
+    spec = importlib.util.spec_from_file_location("celestial_nav", filepath)
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+        return module
+    except FileNotFoundError:
+        print(f"Error: Simulation module not found at {filepath}")
+        return None
 
+def run_simulation_for_visualization():
+    """Run the simulation to get data for visualization"""
+    simulation_file = "celestial_nav_simulation.py"
+    sim_module = import_simulation_module(simulation_file)
+    if sim_module is None:
+        return None
+    
+    print("Running Monte Carlo simulation for visualization data...")
+    results = sim_module.run_monte_carlo_simulation(num_trials=1000, verbose=False)
+    return results
 
-class CelestialNavVisualizer:
-    """Generate visualizations for celestial navigation simulation results"""
-    
-    def __init__(self, results, output_dir='figures'):
-        """
-        Initialize visualizer with simulation results
-        
-        Args:
-            results: Dictionary containing Monte Carlo simulation results
-            output_dir: Directory to save figures
-        """
-        self.results = results
-        self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Create timestamp for this visualization session
-        self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-    def generate_all_figures(self):
-        """Generate all figures for the paper"""
-        print("\n" + "="*70)
-        print("GENERATING FIGURES FOR MILITARY REVIEW PAPER")
-        print("="*70)
-        
-        figures_generated = []
-        
-        # ASCII visualizations (always available)
-        print("\nGenerating ASCII visualizations...")
-        ascii_file = self.generate_ascii_summary()
-        figures_generated.append(ascii_file)
-        
-        # Matplotlib visualizations (if available)
-        if MATPLOTLIB_AVAILABLE:
-            print("\nGenerating matplotlib figures...")
-            
-            # Figure 1: Success Rate by Scenario (Bar Chart)
-            fig1 = self.plot_success_rates_by_scenario()
-            figures_generated.append(fig1)
-            
-            # Figure 2: Algorithm Distribution (Stacked Bar Chart)
-            fig2 = self.plot_algorithm_distribution()
-            figures_generated.append(fig2)
-            
-            # Figure 3: Computation Time Analysis (Box Plot)
-            fig3 = self.plot_computation_time_analysis()
-            figures_generated.append(fig3)
-            
-            # Figure 4: Progressive Strategy Flow (Sankey-style)
-            fig4 = self.plot_progressive_strategy_flow()
-            figures_generated.append(fig4)
-            
-            # Figure 5: Environmental Resilience Heatmap
-            fig5 = self.plot_environmental_resilience()
-            figures_generated.append(fig5)
-            
-            # Figure 6: Algorithm Effectiveness Matrix
-            fig6 = self.plot_algorithm_effectiveness_matrix()
-            figures_generated.append(fig6)
-            
-        else:
-            print("\nSkipping matplotlib figures (library not available)")
-        
-        print("\n" + "="*70)
-        print("FIGURE GENERATION COMPLETE")
-        print("="*70)
-        print(f"\nFigures saved to: {self.output_dir}/")
-        print("\nGenerated files:")
-        for fig in figures_generated:
-            print(f"  - {fig}")
-        
-        return figures_generated
-    
-    def generate_ascii_summary(self):
-        """Generate ASCII-based visualization summary"""
-        filename = f"{self.output_dir}/ascii_summary_{self.timestamp}.txt"
-        
-        with open(filename, 'w') as f:
-            f.write("="*70 + "\n")
-            f.write("CELESTIAL NAVIGATION SIMULATION - ASCII VISUALIZATION\n")
-            f.write("="*70 + "\n\n")
-            
-            # Add algorithm explanations section
-            f.write("ALGORITHM EXPLANATIONS (Simple Examples)\n")
-            f.write("-"*70 + "\n\n")
-            
-            f.write("LIEBE'S TRIANGLE ALGORITHM (Fast - Primary Method):\n")
-            f.write("  Uses: 3 stars form a triangle pattern\n")
-            f.write("  Example: Camera sees stars A, B, C\n")
-            f.write("    Distance A-B = 15.3 deg, B-C = 22.7 deg, A-C = 31.2 deg\n")
-            f.write("    Pattern [15.3, 22.7, 31.2] is looked up in catalog index\n")
-            f.write("    If exact match found -> Identification success\n")
-            f.write("  Best for: Clean conditions, low noise\n\n")
-            
-            f.write("GEOMETRIC VOTING ALGORITHM (Moderate - Fallback 1):\n")
-            f.write("  Uses: All star pairs 'vote' for catalog stars\n")
-            f.write("  Example: Same 3 stars (A, B, C)\n")
-            f.write("    Distance 15.3 deg matches Star#42 & Star#67 -> 1 vote each\n")
-            f.write("    Distance 22.7 deg matches Star#67 & Star#89 -> 1 vote each\n")
-            f.write("    Distance 31.2 deg matches Star#42 & Star#89 -> 1 vote each\n")
-            f.write("    Vote Tally: Star#42=2, Star#67=2, Star#89=2\n")
-            f.write("    High vote count = Correct identification\n")
-            f.write("  Best for: Noisy conditions, partial sky obstruction\n\n")
-            
-            f.write("PYRAMID ALGORITHM (Most Robust - Fallback 2):\n")
-            f.write("  Uses: 4 stars with 6 distance measurements\n")
-            f.write("  Example: Stars A, B, C, D create 6 distances\n")
-            f.write("    Uses 4 shortest distances as unique signature\n")
-            f.write("    High redundancy makes it very noise-tolerant\n")
-            f.write("  Best for: Lost-in-space scenarios (requires 4+ stars)\n\n")
-            
-            f.write("="*70 + "\n\n")
-            
-            # Success Rate Bar Chart (ASCII)
-            f.write("FIGURE 1: Success Rate by Scenario\n")
-            f.write("-"*70 + "\n\n")
-            
-            scenario_stats = self.results['scenario_stats']
-            sorted_scenarios = sorted(scenario_stats.items(), 
-                                     key=lambda x: x[1]['success_rate'], 
-                                     reverse=True)
-            
-            max_name_len = max(len(name) for name, _ in sorted_scenarios)
-            
-            for name, stats in sorted_scenarios:
-                success_rate = stats['success_rate']
-                bar_length = int(success_rate / 2)  # Scale to fit 50 chars max
-                bar = '#' * bar_length
-                f.write(f"{name:<{max_name_len}} | {bar} {success_rate:5.1f}%\n")
-            
-            f.write("\n" + "0%" + " "*43 + "50%" + " "*43 + "100%\n\n")
-            
-            # Algorithm Success Rate Table
-            f.write("\nFIGURE 2: Algorithm Success Rates by Scenario\n")
-            f.write("-"*70 + "\n\n")
-            
-            f.write(f"{'Scenario':<20} {'Liebe':<15} {'Voting':<15} {'Pyramid':<15} {'Failed':<15}\n")
-            f.write(f"{'':20} {'(% success)':<15} {'(% success)':<15} {'(% success)':<15} {'(% failed)':<15}\n")
-            f.write("-"*70 + "\n")
-            
-            for name, stats in scenario_stats.items():
-                dist = stats['algorithm_distribution']
-                total = stats['total_trials']
-                
-                liebe_pct = (dist.get('Liebe', 0) / total) * 100
-                voting_pct = (dist.get('Voting', 0) / total) * 100
-                pyramid_pct = (dist.get('Pyramid', 0) / total) * 100
-                failed_pct = (dist.get('Failed', 0) / total) * 100
-                
-                f.write(f"{name:<20} {liebe_pct:6.1f}%         {voting_pct:6.1f}%         "
-                       f"{pyramid_pct:6.1f}%         {failed_pct:6.1f}%\n")
-            
-            # Overall Statistics
-            f.write("\n\nFIGURE 3: Overall Algorithm Performance\n")
-            f.write("-"*70 + "\n\n")
-            
-            algo_totals = self.results['algorithm_totals']
-            total_trials = self.results['total_trials']
-            
-            for algo, count in sorted(algo_totals.items(), 
-                                     key=lambda x: x[1], reverse=True):
-                percentage = (count / total_trials) * 100
-                bar_length = int(percentage / 2)
-                bar = '*' * bar_length
-                f.write(f"{algo:<12} | {bar} {percentage:5.1f}% ({count} trials)\n")
-            
-            # Computation Time Summary
-            f.write("\n\nFIGURE 4: Computation Time Summary\n")
-            f.write("-"*70 + "\n\n")
-            
-            f.write(f"{'Scenario':<20} {'Avg Time (ms)':<15} {'Std Dev (ms)':<15}\n")
-            f.write("-"*70 + "\n")
-            
-            for name, stats in scenario_stats.items():
-                avg_time = stats['avg_computation_time'] * 1000
-                std_time = stats['std_computation_time'] * 1000
-                f.write(f"{name:<20} {avg_time:>12.3f}    {std_time:>12.3f}\n")
-            
-            # Progressive Strategy Effectiveness
-            f.write("\n\nFIGURE 5: Progressive Strategy Effectiveness\n")
-            f.write("-"*70 + "\n\n")
-            
-            liebe_count = algo_totals.get('Liebe', 0)
-            voting_count = algo_totals.get('Voting', 0)
-            pyramid_count = algo_totals.get('Pyramid', 0)
-            
-            total_success = liebe_count + voting_count + pyramid_count
-            
-            if total_success > 0:
-                f.write(f"Total Successful Identifications: {total_success}\n\n")
-                f.write(f"Primary (Liebe):    {liebe_count:5d} ({liebe_count/total_success*100:5.1f}% of successes)\n")
-                f.write(f"Fallback 1 (Voting): {voting_count:5d} ({voting_count/total_success*100:5.1f}% of successes)\n")
-                f.write(f"Fallback 2 (Pyramid): {pyramid_count:5d} ({pyramid_count/total_success*100:5.1f}% of successes)\n\n")
-                
-                fallback_value = voting_count + pyramid_count
-                f.write(f"Fallback algorithms recovered {fallback_value} cases ({fallback_value/total_success*100:.1f}%)\n")
-                f.write(f"that Liebe alone could not solve.\n")
-            
-            f.write("\n" + "="*70 + "\n")
-            f.write("END OF ASCII VISUALIZATION\n")
-            f.write("="*70 + "\n")
-        
-        print(f"  ASCII summary saved: {filename}")
-        return filename
-    
-    def plot_success_rates_by_scenario(self):
-        """Figure 1: Bar chart of success rates by scenario"""
-        filename = f"{self.output_dir}/fig1_success_rates_{self.timestamp}.png"
-        
-        scenario_stats = self.results['scenario_stats']
-        sorted_scenarios = sorted(scenario_stats.items(), 
-                                 key=lambda x: x[1]['success_rate'], 
-                                 reverse=True)
-        
-        names = [name for name, _ in sorted_scenarios]
-        success_rates = [stats['success_rate'] for _, stats in sorted_scenarios]
-        
-        # Color code by performance
-        colors = []
-        for rate in success_rates:
-            if rate >= 80:
-                colors.append('#2ecc71')  # Green - Excellent
-            elif rate >= 50:
-                colors.append('#f39c12')  # Orange - Moderate
-            elif rate >= 20:
-                colors.append('#e74c3c')  # Red - Poor
-            else:
-                colors.append('#95a5a6')  # Gray - Failed
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        bars = ax.barh(names, success_rates, color=colors, edgecolor='black', linewidth=1.2)
-        
-        ax.set_xlabel('Success Rate (%)', fontsize=12, fontweight='bold')
-        ax.set_ylabel('Operational Scenario', fontsize=12, fontweight='bold')
-        ax.set_title('Celestial Navigation Success Rate by Environment\n' + 
-                     f'({self.results["num_trials_per_scenario"]} trials per scenario)',
-                     fontsize=14, fontweight='bold', pad=20)
-        
-        # Add value labels on bars
-        for i, (bar, rate) in enumerate(zip(bars, success_rates)):
-            ax.text(rate + 2, i, f'{rate:.1f}%', va='center', fontsize=10, fontweight='bold')
-        
-        ax.set_xlim(0, 105)
-        ax.grid(axis='x', alpha=0.3, linestyle='--')
-        
-        # Add legend for color coding
-        legend_elements = [
-            mpatches.Patch(color='#2ecc71', label='Excellent (>=80%)'),
-            mpatches.Patch(color='#f39c12', label='Moderate (50-79%)'),
-            mpatches.Patch(color='#e74c3c', label='Poor (20-49%)'),
-            mpatches.Patch(color='#95a5a6', label='Failed (<20%)')
-        ]
-        ax.legend(handles=legend_elements, loc='lower right', fontsize=9)
-        
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  Figure 1 saved: {filename}")
-        return filename
-    
-    def plot_algorithm_distribution(self):
-        """Figure 2: Stacked bar chart showing algorithm distribution per scenario"""
-        filename = f"{self.output_dir}/fig2_algorithm_distribution_{self.timestamp}.png"
-        
-        scenario_stats = self.results['scenario_stats']
-        scenarios = list(scenario_stats.keys())
-        
-        # Extract data
-        liebe_pcts = []
-        voting_pcts = []
-        pyramid_pcts = []
-        failed_pcts = []
-        
-        for scenario in scenarios:
-            dist = scenario_stats[scenario]['algorithm_distribution']
-            total = scenario_stats[scenario]['total_trials']
-            
-            liebe_pcts.append((dist.get('Liebe', 0) / total) * 100)
-            voting_pcts.append((dist.get('Voting', 0) / total) * 100)
-            pyramid_pcts.append((dist.get('Pyramid', 0) / total) * 100)
-            failed_pcts.append((dist.get('Failed', 0) / total) * 100)
-        
-        # Create stacked bar chart
-        fig, ax = plt.subplots(figsize=(12, 6))
-        
-        x = np.arange(len(scenarios))
-        width = 0.6
-        
-        p1 = ax.bar(x, liebe_pcts, width, label='Liebe (Fast)', color='#3498db')
-        p2 = ax.bar(x, voting_pcts, width, bottom=liebe_pcts, 
-                    label='Voting (Moderate)', color='#2ecc71')
-        p3 = ax.bar(x, pyramid_pcts, width, 
-                    bottom=np.array(liebe_pcts) + np.array(voting_pcts),
-                    label='Pyramid (Robust)', color='#9b59b6')
-        p4 = ax.bar(x, failed_pcts, width,
-                    bottom=np.array(liebe_pcts) + np.array(voting_pcts) + np.array(pyramid_pcts),
-                    label='Failed', color='#e74c3c')
-        
-        ax.set_ylabel('Percentage of Trials (%)', fontsize=12, fontweight='bold')
-        ax.set_xlabel('Operational Scenario', fontsize=12, fontweight='bold')
-        ax.set_title('Algorithm Success Rates by Scenario\n' +
-                     'Progressive Fallback Strategy Performance',
-                     fontsize=14, fontweight='bold', pad=20)
-        ax.set_xticks(x)
-        ax.set_xticklabels(scenarios, rotation=45, ha='right')
-        ax.legend(loc='upper right', fontsize=10)
-        ax.set_ylim(0, 100)
-        ax.grid(axis='y', alpha=0.3, linestyle='--')
-        
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  Figure 2 saved: {filename}")
-        return filename
-    
-    def plot_computation_time_analysis(self):
-        """Figure 3: Computation time comparison"""
-        filename = f"{self.output_dir}/fig3_computation_time_{self.timestamp}.png"
-        
-        scenario_stats = self.results['scenario_stats']
-        scenarios = list(scenario_stats.keys())
-        
-        avg_times = [stats['avg_computation_time'] * 1000 for stats in scenario_stats.values()]
-        std_times = [stats['std_computation_time'] * 1000 for stats in scenario_stats.values()]
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        x = np.arange(len(scenarios))
-        bars = ax.bar(x, avg_times, yerr=std_times, capsize=5, 
-                      color='#3498db', edgecolor='black', linewidth=1.2,
-                      error_kw={'linewidth': 2, 'ecolor': '#e74c3c'})
-        
-        ax.set_ylabel('Computation Time (milliseconds)', fontsize=12, fontweight='bold')
-        ax.set_xlabel('Operational Scenario', fontsize=12, fontweight='bold')
-        ax.set_title('Average Computation Time per Scenario\n' +
-                     '(Error bars show standard deviation)',
-                     fontsize=14, fontweight='bold', pad=20)
-        ax.set_xticks(x)
-        ax.set_xticklabels(scenarios, rotation=45, ha='right')
-        ax.grid(axis='y', alpha=0.3, linestyle='--')
-        
-        # Add value labels
-        for i, (bar, avg, std) in enumerate(zip(bars, avg_times, std_times)):
-            ax.text(i, avg + std + 0.0005, f'{avg:.3f}', ha='center', va='bottom',
-                   fontsize=9, fontweight='bold')
-        
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  Figure 3 saved: {filename}")
-        return filename
-    
-    def plot_progressive_strategy_flow(self):
-        """Figure 4: Visualization of progressive strategy flow"""
-        filename = f"{self.output_dir}/fig4_progressive_flow_{self.timestamp}.png"
-        
-        algo_totals = self.results['algorithm_totals']
-        total_trials = self.results['total_trials']
-        
-        liebe_count = algo_totals.get('Liebe', 0)
-        voting_count = algo_totals.get('Voting', 0)
-        pyramid_count = algo_totals.get('Pyramid', 0)
-        failed_count = algo_totals.get('Failed', 0)
-        
-        fig, ax = plt.subplots(figsize=(12, 8))
-        
-        # Define boxes for each stage
-        stages = [
-            {'name': 'Total Trials', 'count': total_trials, 'y': 4, 'color': '#95a5a6'},
-            {'name': 'Liebe Algorithm\n(Fast)', 'count': liebe_count, 'y': 3, 'color': '#3498db'},
-            {'name': 'Geometric Voting\n(Fallback 1)', 'count': voting_count, 'y': 2, 'color': '#2ecc71'},
-            {'name': 'Pyramid Algorithm\n(Fallback 2)', 'count': pyramid_count, 'y': 1, 'color': '#9b59b6'},
-            {'name': 'Failed', 'count': failed_count, 'y': 0, 'color': '#e74c3c'}
-        ]
-        
-        # Draw boxes
-        for stage in stages:
-            width = (stage['count'] / total_trials) * 8
-            x_center = 0
-            
-            rect = mpatches.Rectangle((x_center - width/2, stage['y'] - 0.3), 
-                                     width, 0.6, 
-                                     linewidth=2, 
-                                     edgecolor='black',
-                                     facecolor=stage['color'],
-                                     alpha=0.7)
-            ax.add_patch(rect)
-            
-            # Add text
-            percentage = (stage['count'] / total_trials) * 100
-            ax.text(x_center, stage['y'], 
-                   f"{stage['name']}\n{stage['count']} ({percentage:.1f}%)",
-                   ha='center', va='center', fontsize=11, fontweight='bold')
-        
-        # Draw arrows
-        arrow_props = dict(arrowstyle='->', lw=2, color='black')
-        
-        # Total to Liebe
-        ax.annotate('', xy=(0, 3.3), xytext=(0, 3.7), arrowprops=arrow_props)
-        
-        # Liebe to Voting (failures)
-        if voting_count > 0:
-            ax.annotate('', xy=(0, 2.3), xytext=(0, 2.7), arrowprops=arrow_props)
-            ax.text(0.5, 2.5, 'Liebe\nFailed', ha='left', va='center', fontsize=9, style='italic')
-        
-        # Voting to Pyramid (failures)
-        if pyramid_count > 0:
-            ax.annotate('', xy=(0, 1.3), xytext=(0, 1.7), arrowprops=arrow_props)
-            ax.text(0.5, 1.5, 'Voting\nFailed', ha='left', va='center', fontsize=9, style='italic')
-        
-        # To Failed
-        if failed_count > 0:
-            ax.annotate('', xy=(0, 0.3), xytext=(0, 0.7), arrowprops=arrow_props)
-            ax.text(0.5, 0.5, 'All\nFailed', ha='left', va='center', fontsize=9, style='italic')
-        
-        ax.set_xlim(-5, 5)
-        ax.set_ylim(-0.5, 4.5)
-        ax.axis('off')
-        
-        ax.set_title('Progressive Algorithm Strategy Flow\n' +
-                     f'Total Trials: {total_trials}',
-                     fontsize=14, fontweight='bold', pad=20)
-        
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  Figure 4 saved: {filename}")
-        return filename
-    
-    def plot_environmental_resilience(self):
-        """Figure 5: Environmental factors vs success rate"""
-        filename = f"{self.output_dir}/fig5_environmental_resilience_{self.timestamp}.png"
-        
-        # This would require access to the OPERATIONAL_SCENARIOS
-        # For now, create a simplified version showing success vs noise
-        
-        scenario_stats = self.results['scenario_stats']
-        
-        # Extract data (using scenario names as proxy for conditions)
-        scenarios = []
-        success_rates = []
-        
-        for name, stats in scenario_stats.items():
-            scenarios.append(name)
-            success_rates.append(stats['success_rate'])
-        
-        fig, ax = plt.subplots(figsize=(10, 6))
-        
-        colors = ['#2ecc71' if rate >= 80 else '#f39c12' if rate >= 50 
-                 else '#e74c3c' if rate >= 20 else '#95a5a6' 
-                 for rate in success_rates]
-        
-        ax.scatter(range(len(scenarios)), success_rates, 
-                  s=500, c=colors, edgecolors='black', linewidth=2, alpha=0.7)
-        
-        # Add scenario labels
-        for i, (scenario, rate) in enumerate(zip(scenarios, success_rates)):
-            ax.text(i, rate + 5, scenario, ha='center', va='bottom', 
-                   fontsize=9, rotation=45)
-        
-        ax.set_ylabel('Success Rate (%)', fontsize=12, fontweight='bold')
-        ax.set_xlabel('Operational Scenarios (ordered as defined)', fontsize=12, fontweight='bold')
-        ax.set_title('Environmental Impact on Navigation Success\n' +
-                     'Scenario Performance Comparison',
-                     fontsize=14, fontweight='bold', pad=20)
-        ax.set_ylim(-5, 105)
-        ax.grid(True, alpha=0.3, linestyle='--')
-        ax.set_xticks([])
-        
-        # Add horizontal reference lines
-        ax.axhline(y=80, color='#2ecc71', linestyle='--', alpha=0.5, label='Excellent (80%)')
-        ax.axhline(y=50, color='#f39c12', linestyle='--', alpha=0.5, label='Moderate (50%)')
-        ax.axhline(y=20, color='#e74c3c', linestyle='--', alpha=0.5, label='Poor (20%)')
-        ax.legend(loc='upper right', fontsize=9)
-        
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  Figure 5 saved: {filename}")
-        return filename
-    
-    def plot_algorithm_effectiveness_matrix(self):
-        """Figure 6: Heat map showing which algorithm works best in each scenario"""
-        filename = f"{self.output_dir}/fig6_algorithm_effectiveness_{self.timestamp}.png"
-        
-        scenario_stats = self.results['scenario_stats']
-        scenarios = list(scenario_stats.keys())
-        algorithms = ['Liebe', 'Voting', 'Pyramid']
-        
-        # Create matrix
-        matrix = []
-        for scenario in scenarios:
-            row = []
-            dist = scenario_stats[scenario]['algorithm_distribution']
-            total = scenario_stats[scenario]['total_trials']
-            
-            for algo in algorithms:
-                percentage = (dist.get(algo, 0) / total) * 100
-                row.append(percentage)
-            matrix.append(row)
-        
-        matrix = np.array(matrix)
-        
-        fig, ax = plt.subplots(figsize=(10, 8))
-        
-        im = ax.imshow(matrix, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
-        
-        # Set ticks
-        ax.set_xticks(np.arange(len(algorithms)))
-        ax.set_yticks(np.arange(len(scenarios)))
-        ax.set_xticklabels(algorithms, fontsize=11, fontweight='bold')
-        ax.set_yticklabels(scenarios, fontsize=10)
-        
-        # Rotate x labels
-        plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-        
-        # Add values in cells
-        for i in range(len(scenarios)):
-            for j in range(len(algorithms)):
-                text = ax.text(j, i, f'{matrix[i, j]:.1f}%',
-                             ha="center", va="center", color="black", 
-                             fontsize=10, fontweight='bold')
-        
-        ax.set_title('Algorithm Effectiveness Matrix\n' +
-                     '(Percentage of trials solved by each algorithm)',
-                     fontsize=14, fontweight='bold', pad=20)
-        
-        # Add colorbar
-        cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label('Success Percentage (%)', rotation=270, labelpad=20, 
-                      fontsize=11, fontweight='bold')
-        
-        plt.tight_layout()
-        plt.savefig(filename, dpi=300, bbox_inches='tight')
-        plt.close()
-        
-        print(f"  Figure 6 saved: {filename}")
-        return filename
+def generate_success_rates_chart(scenario_stats: Dict[str, Dict], output_dir: str = 'figures') -> str:
+    """
+    Generate Figure 1: Monte Carlo Success Rates by Operational Scenario
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        return "Skipped (Matplotlib missing)"
 
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Prepare data
+    scenarios = []
+    success_rates = []
+    colors = []
+    descriptions = []
+    
+    color_map = {
+        'Optimal_WideField': '#2ecc71',      # Green - best performance
+        'Clear_Rural_Base': '#3498db',       # Blue - good performance  
+        'Urban_Canyon_Restricted': '#f39c12', # Orange - moderate
+        'Forest_Canopy_Obscured': '#e74c3c',  # Red - poor
+        'Dust_Storm_HighNoise': '#9b59b6',    # Purple - challenging
+        'Vehicle_Motion_Extreme': '#34495e'   # Dark gray - worst
+    }
+    
+    # Sort scenarios by success rate
+    sorted_scenarios = sorted(
+        scenario_stats.items(), 
+        key=lambda x: x[1]['success_rate'], 
+        reverse=True
+    )
+    
+    for scenario_name, stats in sorted_scenarios:
+        scenarios.append(scenario_name.replace('_', '\n'))
+        success_rates.append(stats['success_rate'])
+        colors.append(color_map.get(scenario_name, '#95a5a6'))
+        descriptions.append(stats['description'])
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=(12, 8))
+    
+    # Create bars
+    bars = ax.bar(scenarios, success_rates, color=colors, alpha=0.8, edgecolor='black', linewidth=1.2)
+    
+    # Add value labels on bars
+    for i, (bar, rate) in enumerate(zip(bars, success_rates)):
+        height = bar.get_height()
+        ax.text(bar.get_x() + bar.get_width()/2., height + 1,
+                f'{rate:.1f}%', ha='center', va='bottom', fontweight='bold', fontsize=11)
+    
+    # Customize the chart
+    ax.set_ylabel('Success Rate (%)', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Operational Scenario', fontsize=14, fontweight='bold')
+    ax.set_title('Figure 1: Star Identification Success Rates by Military Operational Scenario\n(1000 Trials per Scenario)', 
+                 fontsize=16, fontweight='bold', pad=20)
+    
+    # Set y-axis limit
+    ax.set_ylim(0, 105)
+    ax.grid(True, axis='y', alpha=0.3, linestyle='--')
+    
+    # Add scenario descriptions as annotations
+    for i, (scenario, desc) in enumerate(zip(scenarios, descriptions)):
+        short_desc = desc.split('(')[0].strip()
+        ax.text(i, -15, short_desc, ha='center', va='top', fontsize=9, 
+                style='italic', color='gray', rotation=0)
+    
+    # Adjust layout
+    plt.tight_layout()
+    
+    # Save figure
+    filepath = os.path.join(output_dir, "fig1_success_rates.png")
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    return filepath
 
-def main():
-    """Main execution function"""
-    print("="*70)
-    print("CELESTIAL NAVIGATION VISUALIZATION GENERATOR")
+def generate_algorithm_performance_chart(scenario_stats: Dict[str, Dict], output_dir: str = 'figures') -> str:
+    """
+    Generate Figure 2: Algorithm Performance and Fallback Strategy Analysis
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        return "Skipped (Matplotlib missing)"
+
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Prepare data for stacked bar chart
+    scenarios = []
+    liebe_data = []
+    voting_data = []
+    pyramid_data = []
+    failed_data = []
+    
+    # Sort scenarios by overall success rate
+    sorted_scenarios = sorted(
+        scenario_stats.items(), 
+        key=lambda x: x[1]['success_rate'], 
+        reverse=True
+    )
+    
+    for scenario_name, stats in sorted_scenarios:
+        scenarios.append(scenario_name.replace('_', '\n'))
+        algo_dist = stats['algorithm_distribution']
+        total = stats['total_trials']
+        
+        liebe_pct = (algo_dist.get('Liebe', 0) / total) * 100
+        voting_pct = (algo_dist.get('Voting', 0) / total) * 100
+        pyramid_pct = (algo_dist.get('Pyramid', 0) / total) * 100
+        failed_pct = (algo_dist.get('Failed', 0) / total) * 100
+        
+        liebe_data.append(liebe_pct)
+        voting_data.append(voting_pct)
+        pyramid_data.append(pyramid_pct)
+        failed_data.append(failed_pct)
+    
+    # Create figure with more vertical space
+    fig, ax = plt.subplots(figsize=(14, 10))  # Increased height for title space
+    
+    # Create stacked bars
+    bar_width = 0.7
+    x_pos = np.arange(len(scenarios))
+    
+    bars_liebe = ax.bar(x_pos, liebe_data, bar_width, label='Liebe (Fast)', 
+                       color='#2ecc71', alpha=0.8, edgecolor='black')
+    bars_voting = ax.bar(x_pos, voting_data, bar_width, bottom=liebe_data, 
+                        label='Voting (Robust)', color='#3498db', alpha=0.8, edgecolor='black')
+    bars_pyramid = ax.bar(x_pos, pyramid_data, bar_width, 
+                         bottom=[i+j for i,j in zip(liebe_data, voting_data)], 
+                         label='Pyramid (LIS)', color='#9b59b6', alpha=0.8, edgecolor='black')
+    bars_failed = ax.bar(x_pos, failed_data, bar_width, 
+                        bottom=[i+j+k for i,j,k in zip(liebe_data, voting_data, pyramid_data)], 
+                        label='Failed', color='#e74c3c', alpha=0.8, edgecolor='black')
+    
+    # Add value annotations
+    for i, (liebe, vote, pyramid, fail) in enumerate(zip(liebe_data, voting_data, pyramid_data, failed_data)):
+        total_success = liebe + vote + pyramid
+        ax.text(i, total_success + 2, f'{total_success:.1f}%', 
+                ha='center', va='bottom', fontweight='bold', fontsize=10,
+                bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+    
+    # Customize chart
+    ax.set_ylabel('Percentage of Trials (%)', fontsize=14, fontweight='bold')
+    ax.set_xlabel('Operational Scenario', fontsize=14, fontweight='bold')
+    ax.set_title('Figure 2: Algorithm Performance and Progressive Fallback Strategy\n(1000 Trials per Scenario)', 
+                 fontsize=16, fontweight='bold', pad=30)  # Increased pad for title spacing
+    
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(scenarios)
+    ax.set_ylim(0, 110)
+    
+    # Move legend to below the chart to avoid covering title
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.15), 
+              ncol=4, framealpha=0.9, fontsize=11)
+    
+    ax.grid(True, axis='y', alpha=0.3, linestyle='--')
+    
+    # Add strategy explanation (moved to side to avoid legend conflict)
+    explanation_text = (
+        "Progressive Strategy:\n"
+        "1. Liebe Algorithm (Fastest)\n"
+        "2. Geometric Voting (Robust)\n" 
+        "3. Pyramid (Most Reliable LIS)"
+    )
+    ax.text(0.02, 0.85, explanation_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5", facecolor="lightyellow", alpha=0.8))
+    
+    plt.tight_layout()
+    plt.subplots_adjust(bottom=0.2)  # Adjust bottom margin for legend
+    
+    # Save figure
+    filepath = os.path.join(output_dir, "fig2_algorithm_performance.png")
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    return filepath
+
+def generate_environmental_analysis_chart(scenario_stats: Dict[str, Dict], output_dir: str = 'figures') -> str:
+    """
+    Generate Figure 3: Environmental Degradation Impact Analysis
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        return "Skipped (Matplotlib missing)"
+
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Prepare data for bubble chart
+    scenarios = []
+    noise_levels = []
+    star_counts = []
+    success_rates = []
+    bubble_sizes = []
+    colors = []
+    
+    scenario_params = {
+        'Optimal_WideField': {'noise': 0.8, 'stars': 10, 'color': '#2ecc71'},
+        'Clear_Rural_Base': {'noise': 1.0, 'stars': 7, 'color': '#3498db'},
+        'Urban_Canyon_Restricted': {'noise': 1.5, 'stars': 4, 'color': '#f39c12'},
+        'Forest_Canopy_Obscured': {'noise': 1.2, 'stars': 3, 'color': '#e74c3c'},
+        'Dust_Storm_HighNoise': {'noise': 2.5, 'stars': 5, 'color': '#9b59b6'},
+        'Vehicle_Motion_Extreme': {'noise': 3.5, 'stars': 6, 'color': '#34495e'}
+    }
+    
+    for scenario_name, stats in scenario_stats.items():
+        scenarios.append(scenario_name)
+        params = scenario_params[scenario_name]
+        noise_levels.append(params['noise'])
+        star_counts.append(params['stars'])
+        success_rates.append(stats['success_rate'])
+        # Use meaningful bubble sizes based on computation time (avoid zeros)
+        comp_time = max(stats['avg_computation_time'], 0.0001)  # Avoid zero
+        bubble_sizes.append(comp_time * 8000)  # Adjusted scale for better visibility
+        colors.append(params['color'])
+    
+    # Create figure with subplots - simplified layout
+    fig = plt.figure(figsize=(16, 12))  # Larger figure for better readability
+    
+    # Subplot 1: Noise vs Success Rate (main analysis)
+    ax1 = fig.add_subplot(2, 2, 1)
+    scatter1 = ax1.scatter(noise_levels, success_rates, s=bubble_sizes, c=colors, 
+                          alpha=0.7, edgecolors='black')
+    
+    # Add scenario labels with better positioning to avoid overlaps
+    label_offsets = {
+        'Optimal_WideField': (15, 15),
+        'Clear_Rural_Base': (15, -25),  # Moved further down
+        'Urban_Canyon_Restricted': (-25, 15),  # Moved further left
+        'Forest_Canopy_Obscured': (15, -30),   # Moved further down
+        'Dust_Storm_HighNoise': (-30, 15),     # Moved further left  
+        'Vehicle_Motion_Extreme': (15, -35)    # Moved further down
+    }
+    
+    for i, scenario in enumerate(scenarios):
+        offset = label_offsets.get(scenario, (10, 10))
+        ax1.annotate(scenario.replace('_', '\n'), 
+                    (noise_levels[i], success_rates[i]),
+                    xytext=offset, textcoords='offset points',
+                    fontsize=10, ha='center', va='bottom',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+                    arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0", lw=1))
+    
+    ax1.set_xlabel('Noise Level (Multiplier of Baseline)', fontsize=12, fontweight='bold')
+    ax1.set_ylabel('Success Rate (%)', fontsize=12, fontweight='bold')
+    ax1.set_title('Noise Impact on Performance\n(Bubble size = Computation Time)', fontsize=14, fontweight='bold')
+    ax1.grid(True, alpha=0.3)
+    ax1.set_xlim(0.5, 4.0)
+    ax1.set_ylim(0, 105)
+    
+    # Subplot 2: Star Count vs Success Rate
+    ax2 = fig.add_subplot(2, 2, 2)
+    scatter2 = ax2.scatter(star_counts, success_rates, s=120, c=colors, alpha=0.7, edgecolors='black')
+    
+    # Custom offsets for star availability plot to fix "Clear" label overlap
+    star_label_offsets = {
+        'Optimal_WideField': (10, 10),
+        'Clear_Rural_Base': (10, -25),  # Moved down to avoid overlap
+        'Urban_Canyon_Restricted': (-25, 10),  # Moved left
+        'Forest_Canopy_Obscured': (10, -25),   # Moved down
+        'Dust_Storm_HighNoise': (-25, 10),     # Moved left
+        'Vehicle_Motion_Extreme': (10, -25)    # Moved down
+    }
+    
+    for i, scenario in enumerate(scenarios):
+        offset = star_label_offsets.get(scenario, (10, 10))
+        ax2.annotate(scenario.replace('_', '\n'), 
+                    (star_counts[i], success_rates[i]),
+                    xytext=offset, textcoords='offset points',
+                    fontsize=10, ha='center', va='bottom',
+                    bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8),
+                    arrowprops=dict(arrowstyle="->", connectionstyle="arc3,rad=0", lw=1))
+    
+    ax2.set_xlabel('Visible Stars in FOV', fontsize=12, fontweight='bold')
+    ax2.set_ylabel('Success Rate (%)', fontsize=12, fontweight='bold')
+    ax2.set_title('Star Availability Impact', fontsize=14, fontweight='bold')
+    ax2.grid(True, alpha=0.3)
+    ax2.set_xlim(2, 11)
+    ax2.set_ylim(0, 105)
+    
+    # Subplot 3: Computation Time by Scenario (fixed to show actual values)
+    ax3 = fig.add_subplot(2, 2, 3)
+    computation_times = [max(stats['avg_computation_time'] * 1000, 0.01) for stats in scenario_stats.values()]  # Convert to ms, ensure minimum
+    scenario_names_short = [name.replace('_', '\n') for name in scenarios]
+    
+    bars = ax3.bar(scenario_names_short, computation_times, color=colors, alpha=0.7, edgecolor='black')
+    
+    # Add value labels with proper formatting
+    for bar, time_val in zip(bars, computation_times):
+        height = bar.get_height()
+        ax3.text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                f'{time_val:.3f} ms', ha='center', va='bottom', fontweight='bold', fontsize=9)
+    
+    ax3.set_ylabel('Computation Time (milliseconds)', fontsize=12, fontweight='bold')
+    ax3.set_xlabel('Operational Scenario', fontsize=12, fontweight='bold')
+    ax3.set_title('Algorithm Processing Time', fontsize=14, fontweight='bold')
+    ax3.grid(True, axis='y', alpha=0.3)
+    # Set reasonable y-limit based on data
+    max_time = max(computation_times) * 1.2
+    ax3.set_ylim(0, max_time)
+    
+    # Subplot 4: Success rate by scenario for quick reference
+    ax4 = fig.add_subplot(2, 2, 4)
+    success_rates_values = [stats['success_rate'] for stats in scenario_stats.values()]
+    
+    bars2 = ax4.bar(scenario_names_short, success_rates_values, color=colors, alpha=0.7, edgecolor='black')
+    
+    for bar, rate in zip(bars2, success_rates_values):
+        height = bar.get_height()
+        ax4.text(bar.get_x() + bar.get_width()/2., height + 1,
+                f'{rate:.1f}%', ha='center', va='bottom', fontweight='bold')
+    
+    ax4.set_ylabel('Success Rate (%)', fontsize=12, fontweight='bold')
+    ax4.set_xlabel('Operational Scenario', fontsize=12, fontweight='bold')
+    ax4.set_title('Success Rate Overview', fontsize=14, fontweight='bold')
+    ax4.set_ylim(0, 105)
+    ax4.grid(True, axis='y', alpha=0.3)
+    
+    # Main title
+    fig.suptitle('Figure 3: Environmental Degradation Impact Analysis\nMilitary Vehicle Celestial Navigation Performance', 
+                 fontsize=16, fontweight='bold', y=0.98)
+    
+    plt.tight_layout()
+    
+    # Save figure
+    filepath = os.path.join(output_dir, "fig3_environmental_analysis.png")
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    
+    return filepath
+
+def generate_sensor_layout(fov_size: float, output_dir: str = 'figures') -> str:
+    """
+    Generate Figure 4: Celestial Navigation Sensor Layout Diagram
+    """
+    if not MATPLOTLIB_AVAILABLE:
+        return "Skipped (Matplotlib missing)"
+
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Configuration
+    radius = fov_size / 2.0
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_facecolor('white')
+
+    # 1. Draw the Sensor Field of View (FOV)
+    fov_circle = patches.Circle((0, 0), radius, 
+                                edgecolor='#1f77b4', facecolor='lightblue', 
+                                linestyle='-', linewidth=3, alpha=0.3, 
+                                label=f'Sensor FOV ({fov_size}° Diameter)')
+    ax.add_patch(fov_circle)
+
+    # 2. Draw Center Point (Bore Sight)
+    ax.plot(0, 0, 'o', color='red', markersize=12, markeredgewidth=2, 
+            label='Vehicle Bore Sight (0, 0)')
+    ax.text(0, 0.5, 'Bore Sight (Reference)', ha='center', va='bottom', 
+            fontsize=12, color='red', fontweight='bold')
+
+    # 3. Draw Axes and Labels
+    # Horizontal Axis (Azimuthal Component)
+    ax.axhline(0, color='gray', linestyle='--', linewidth=0.8)
+    ax.text(radius + 0.5, 0, 'Azimuthal Component →', ha='left', va='center', fontsize=12)
+    ax.text(-radius - 0.5, 0, '← Azimuthal Component', ha='right', va='center', fontsize=12)
+
+    # Vertical Axis (Elevation Component)
+    ax.axvline(0, color='gray', linestyle='--', linewidth=0.8)
+    ax.text(0, radius + 0.5, 'Elevation Component ↑', ha='center', va='bottom', fontsize=12)
+    ax.text(0, -radius - 0.5, 'Elevation Component ↓', ha='center', va='top', fontsize=12)
+    
+    # 4. Add Sample Star Features (Multiple stars to show pattern recognition)
+    # Adjusted positions to avoid text overlap
+    star_positions = [
+        (radius * 0.7, radius * 0.4),   # Primary star
+        (radius * -0.5, radius * 0.6),  # Secondary star
+        (radius * 0.3, radius * -0.5),  # Tertiary star
+        (radius * -0.2, radius * -0.7), # Quaternary star (moved down)
+    ]
+    
+    star_labels = ['Primary Star', 'Secondary Star', 'Tertiary Star', 'Quaternary Star']
+    label_offsets = [(0.3, 0.3), (0.3, 0.3), (0.3, 0.3), (0.3, -0.4)]  # Quaternary label moved down
+    
+    for i, ((x, y), label, offset) in enumerate(zip(star_positions, star_labels, label_offsets)):
+        ax.plot(x, y, '*', color='gold', markersize=15, markeredgewidth=1, 
+                markeredgecolor='black', label=f'Detected Star {i+1}' if i == 0 else "")
+        ax.text(x + offset[0], y + offset[1], label, ha='left', va='bottom', fontsize=10)
+        
+        # Add coordinate lines
+        ax.plot([x, x], [0, y], ':', color='green', linewidth=1, alpha=0.7)
+        ax.plot([0, x], [y, y], ':', color='green', linewidth=1, alpha=0.7)
+
+    # 5. Add sensor mounting illustration (moved further down to avoid text overlap)
+    sensor_box = FancyBboxPatch((-radius*0.1, -radius*0.3), radius*0.2, radius*0.2,
+                               boxstyle="round,pad=0.02", linewidth=2,
+                               edgecolor='#2c3e50', facecolor='#ecf0f1', alpha=0.8)
+    ax.add_patch(sensor_box)
+    # Moved sensor text further down
+    ax.text(0, -radius*0.5, 'Sensor\nAssembly', ha='center', va='top', fontsize=10,
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", alpha=0.8))
+
+    # 6. Final Touches
+    ax.set_xlim(-radius - 1, radius + 1)
+    ax.set_ylim(-radius - 1, radius + 1)
+    ax.set_xlabel('Angular Position (Degrees)', fontsize=14, fontweight='bold')
+    ax.set_ylabel('Angular Position (Degrees)', fontsize=14, fontweight='bold')
+    ax.set_title('Figure 4: Celestial Navigation Sensor Layout (Angular Space)\nMilitary Truck Roof-Mounted Configuration', 
+                 fontsize=16, fontweight='bold', pad=20)
+    
+    # Set ticks
+    tick_interval = 5.0
+    major_ticks = np.arange(-fov_size/2, fov_size/2 + tick_interval, tick_interval)
+    ax.set_xticks(major_ticks)
+    ax.set_yticks(major_ticks)
+
+    ax.set_aspect('equal', adjustable='box')
+    ax.grid(True, linestyle='-', alpha=0.5)
+    ax.legend(loc='upper right', framealpha=0.9)
+    
+    # Add technical specifications
+    specs_text = (
+        f"Technical Specifications:\n"
+        f"• FOV Diameter: {fov_size}°\n"
+        f"• Angular Resolution: <15 arcsec\n"
+        f"• Mounting: Truck roof\n"
+        f"• Operation: GPS-denied environments"
+    )
+    ax.text(0.02, 0.98, specs_text, transform=ax.transAxes, fontsize=10,
+            verticalalignment='top', bbox=dict(boxstyle="round,pad=0.5", facecolor="lightyellow", alpha=0.8))
+    
+    plt.tight_layout()
+    
+    # Create the filename
+    filepath = os.path.join(output_dir, "fig4_sensor_layout.png")
+    plt.savefig(filepath, dpi=300, bbox_inches='tight')
+    plt.close(fig)
+    return filepath
+
+def generate_all_figures():
+    """Generate all 4 figures for the Military Review paper"""
+    print("Starting visualization generation for Military Review paper...")
+    
+    # Run simulation to get data
+    results = run_simulation_for_visualization()
+    if results is None:
+        print("ERROR: Could not run simulation. Please check celestial_nav_simulation.py")
+        return
+    
+    scenario_stats = results['scenario_stats']
+    
+    # Get FOV size for sensor layout
+    simulation_file = "celestial_nav_simulation.py"
+    sim_module = import_simulation_module(simulation_file)
+    if sim_module and sim_module.OPERATIONAL_SCENARIOS:
+        fov_size = sim_module.OPERATIONAL_SCENARIOS[0].fov_size
+    else:
+        fov_size = 20.0  # Default
+    
+    print(f"\nGenerating 4 figures with FOV size: {fov_size}°")
     print("="*70)
     
-    # Check for simulation module
-    sim_file = "celestial_nav_simulation.py"
-    if not os.path.exists(sim_file):
-        print(f"\nERROR: Simulation file '{sim_file}' not found!")
-        print("Please ensure celestial_nav_simulation.py is in the same directory.")
-        return 1
-    
-    print(f"\nImporting simulation module: {sim_file}")
+    # Generate all figures
+    figures = []
     
     try:
-        sim_module = import_simulation_module(sim_file)
+        print("1. Generating Figure 1: Success Rates...")
+        fig1_path = generate_success_rates_chart(scenario_stats)
+        figures.append(("Figure 1: Success Rates", fig1_path))
+        
+        print("2. Generating Figure 2: Algorithm Performance...")
+        fig2_path = generate_algorithm_performance_chart(scenario_stats)
+        figures.append(("Figure 2: Algorithm Performance", fig2_path))
+        
+        print("3. Generating Figure 3: Environmental Analysis...")
+        fig3_path = generate_environmental_analysis_chart(scenario_stats)
+        figures.append(("Figure 3: Environmental Analysis", fig3_path))
+        
+        print("4. Generating Figure 4: Sensor Layout...")
+        fig4_path = generate_sensor_layout(fov_size)
+        figures.append(("Figure 4: Sensor Layout", fig4_path))
+        
+        # Print summary
+        print("\n" + "="*70)
+        print("VISUALIZATION GENERATION COMPLETE")
+        print("="*70)
+        print("Generated figures for Military Review paper:")
+        for name, path in figures:
+            print(f"  {name:30} -> {path}")
+            
+        print(f"\nTotal trials analyzed: {results['total_trials']:,}")
+        print(f"Overall success rate: {results['overall_success_rate']:.1f}%")
+        
     except Exception as e:
-        print(f"\nERROR: Failed to import simulation module: {e}")
-        return 1
-    
-    # Run simulation
-    print("\nRunning Monte Carlo simulation...")
-    print("(This may take a few minutes with 1000 trials per scenario)")
-    
-    try:
-        # Build catalog index
-        sim_module.CATALOG_INDEX = sim_module.build_angular_distance_index(
-            sim_module.MOCK_STAR_CATALOG
-        )
-        
-        # Run simulation with configurable trials
-        num_trials = 1000  # Can be changed via command line argument
-        if len(sys.argv) > 1:
-            num_trials = int(sys.argv[1])
-        
-        results = sim_module.run_monte_carlo_simulation(
-            num_trials=num_trials, 
-            verbose=False
-        )
-        
-    except Exception as e:
-        print(f"\nERROR: Simulation failed: {e}")
+        print(f"\nERROR: Failed to generate visualizations: {e}")
         import traceback
         traceback.print_exc()
-        return 1
-    
-    print("\nSimulation complete!")
-    print(f"Total trials: {results['total_trials']}")
-    print(f"Overall success rate: {results['overall_success_rate']:.1f}%")
-    
-    # Generate visualizations
-    visualizer = CelestialNavVisualizer(results)
-    figures = visualizer.generate_all_figures()
-    
-    print("\n" + "="*70)
-    print("VISUALIZATION COMPLETE")
-    print("="*70)
-    print(f"\nGenerated {len(figures)} figure(s)")
-    print("\nReady for Military Review paper submission!")
-    
-    return 0
+        return
 
+# --- Main Execution ---
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    if not MATPLOTLIB_AVAILABLE:
+        print("ERROR: Required packages not available.")
+        print("Please install: pip install matplotlib numpy")
+        sys.exit(1)
+    
+    generate_all_figures()
