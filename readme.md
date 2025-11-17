@@ -59,3 +59,7 @@ celestial_navigation/
 Install dependencies:
 ```bash
 pip install matplotlib numpy
+```
+## Usage
+
+### Running the Simulation
