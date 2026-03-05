@@ -59,10 +59,11 @@ celestial_navigation/
 - Python 3.7+
 - matplotlib
 - numpy
+- astroquery
 
 Install dependencies:
 ```bash
-pip install matplotlib numpy
+pip install matplotlib numpy astroquery
 ```
 ## Usage
 
