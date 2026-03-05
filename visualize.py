@@ -5,7 +5,7 @@ Visualization for JAMS Paper:
   Fig 3: Environmental Degradation Impact Analysis
   Fig 4: Celestial Navigation Sensor Layout Diagram
   Fig 5: GPS-Denied Positional Error Degradation Curve  [NEW — JAMS key figure]
-  Fig 6: JADO C2 Reintegration Latency (Time-to-First-Fix) [NEW — JADO doctrine hook]
+  Fig 6: C2 Reintegration Latency (Time-to-First-Fix)
 """
 
 import os
@@ -74,7 +74,7 @@ def run_all_simulations():
             scenario=scenario
         )
 
-    print("\nRunning JADO C2 latency simulation...")
+    print("\nRunning C2 latency simulation...")
     c2_latency_results = sim.run_jado_c2_latency_simulation(num_trials_per_scenario=500)
 
     return {
@@ -415,13 +415,13 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
 
 
 # ---------------------------------------------------------------------------
-# Figure 6: JADO C2 Reintegration Latency (Time-to-First-Fix)  [NEW]
+# Figure 6: C2 Reintegration Latency (Time-to-First-Fix)
 # ---------------------------------------------------------------------------
 def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
     """
     Shows time-to-first-fix (TTFF) after GPS denial across all adversary scenarios.
-    Lower TTFF = faster JADO C2 re-establishment.
-    This directly answers the CFP question about JADO C2 resilience.
+    Lower TTFF = faster C2 re-establishment.
+    This quantifies C2 reintegration speed after GPS denial.
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -468,7 +468,7 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
     ax.legend(fontsize=10, framealpha=0.9)
     ax.grid(True, axis='y', alpha=0.3)
 
-    # Add JADO C2 threshold annotation
+    # Add C2 threshold annotation
     # Notional threshold: <15s for tactical C2 reintegration
     ax.axhline(15, color='red', linestyle='--', alpha=0.5, linewidth=1.5)
     ax.text(len(labels_s) - 0.5, 15.5, 'Notional C2\nlatency threshold\n(15s)', color='red',
@@ -483,7 +483,7 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
 
     ax2.set_xlabel('Fix Success Rate (%)', fontsize=12, fontweight='bold')
     ax2.set_ylabel('Mean TTFF (seconds)', fontsize=12, fontweight='bold')
-    ax2.set_title('Fix Success Rate vs. TTFF\n(bottom-right = best JADO C2 posture)',
+    ax2.set_title('Fix Success Rate vs. TTFF\n(bottom-right = best C2 posture)',
                   fontsize=12, fontweight='bold')
     ax2.grid(True, alpha=0.3)
     ax2.axhline(15, color='red', linestyle='--', alpha=0.4)
@@ -500,7 +500,7 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
              bbox=dict(boxstyle="round", facecolor='#fde8e8', alpha=0.5))
 
     plt.tight_layout()
-    fp = os.path.join(output_dir, "fig6_jado_c2_latency.png")
+    fp = os.path.join(output_dir, "fig6_c2_latency.png")
     plt.savefig(fp, dpi=300, bbox_inches='tight')
     plt.close(fig)
     return fp
