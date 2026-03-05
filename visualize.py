@@ -444,7 +444,7 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
     labels_s  = [labels[i] for i in order]
 
     fig, axes = plt.subplots(1, 2, figsize=(16, 7))
-    fig.suptitle('Figure 6: JADO C2 Reintegration Latency — Time-to-First-Fix (TTFF) After GPS Denial\n'
+    fig.suptitle('Figure 6: C2 Reintegration Latency — Time-to-First-Fix (TTFF) After GPS Denial\n'
                  '(Lower TTFF = faster C2 re-establishment; 500 trials per scenario)',
                  fontsize=14, fontweight='bold', y=1.02)
 
@@ -511,7 +511,7 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
 # ---------------------------------------------------------------------------
 def generate_all_figures():
     print("=" * 70)
-    print("JAMS PAPER — Visualization Generation")
+    print("Military Ground Vehicle Celestial Navigation — Visualization")
     print("=" * 70)
 
     all_data = run_all_simulations()
@@ -535,8 +535,8 @@ def generate_all_figures():
     figures.append(("Fig 4 — Sensor Layout",          generate_sensor_layout(fov_size)))
     print("5. Figure 5: GPS Degradation Curve...")
     figures.append(("Fig 5 — GPS Degradation Curve",  generate_gps_degradation_figure(all_data['degradation'])))
-    print("6. Figure 6: JADO C2 Latency...")
-    figures.append(("Fig 6 — JADO C2 Latency",        generate_jado_c2_latency_figure(all_data['c2_latency'])))
+    print("6. Figure 6: C2 Latency...")
+    figures.append(("Fig 6 — C2 Latency",        generate_jado_c2_latency_figure(all_data['c2_latency'])))
 
     print("\n" + "="*70)
     print("GENERATION COMPLETE")

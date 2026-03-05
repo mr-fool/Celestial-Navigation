@@ -1,30 +1,33 @@
-# Celestial Navigation for Military Vehicles
+# Celestial Navigation for Military Ground Vehicles
 
 ## Project Overview
 
-This project simulates and analyzes the performance of celestial navigation systems for military ground vehicles in GPS-denied environments. The research focuses on developing and testing progressive star identification algorithms suitable for vehicle-mounted camera systems operating under various military operational scenarios.
+This project simulates and analyzes the performance of celestial navigation systems for military ground vehicles in GPS-denied environments. The research develops and tests a progressive star identification algorithm strategy suitable for vehicle-mounted camera systems operating under adversary-threat conditions, including electronic warfare saturation, ISR-contested airspace, urban C2 denial, and geographically denied territory.
 
 ## Research Context
 
-Modern military operations face increasing vulnerabilities from GPS jamming and spoofing. This research addresses the critical need for alternative Position, Navigation, and Timing (PNT) systems by investigating celestial navigation techniques adapted for military truck platforms. The simulation models real-world environmental challenges including urban canyons, forest obstructions, dust storms, and vehicle motion.
+Modern military operations face increasing vulnerabilities from GPS jamming and spoofing by near-peer adversaries. This research addresses the critical need for alternative Position, Navigation, and Timing (PNT) systems by investigating celestial navigation techniques adapted for military ground vehicle platforms. Unlike prior work focused on maritime and aviation applications, this simulation targets the under-studied problem of land-based celestial navigation under realistic operational constraints.
 
 ## Key Features
 
-- **Monte Carlo Simulation**: 1000 trials per operational scenario (6000 total trials)
+- **Monte Carlo Simulation**: 1,000 trials per operational scenario (6,000 total trials)
 - **Progressive Algorithm Strategy**: Three-tiered approach (Liebe → Voting → Pyramid)
-- **Military Operational Scenarios**: Six realistic environmental conditions
-- **Performance Metrics**: Success rates, computation times, algorithm effectiveness
-- **Visual Analysis**: Four comprehensive figures for research publication
+- **Adversary-Threat Scenarios**: Six scenarios framed by near-peer threat vectors (Russia EW, China ISR, urban C2 denial, denied territory)
+- **GPS Degradation Simulation**: Positional error growth curves comparing Dead Reckoning, Celestial Nav, and INS+Celestial hybrid over 60 minutes post-GPS denial
+- **C2 Latency Simulation**: Time-to-first-fix (TTFF) measurement across all scenarios as a proxy for C2 reintegration speed
+- **Performance Metrics**: Success rates, attitude RMS error with 95% CI, computation times, algorithm contribution
+- **Visual Analysis**: Six publication-ready figures
 
 ## File Structure
+
 ```
 celestial_navigation/
-├── celestial_nav_simulation.py # Main simulation engine
-├── star_catalog.py # Tycho-2 star catalog implementation
-├── validation_framework.py # Performance validation and error analysis
-├── visualize.py # Figure generation for paper
-├── figures/ # Generated visualization outputs
-├── results/ # Monte Carlo simulation reports
+├── celestial_nav_simulation.py   # Main simulation engine
+├── star_catalog.py               # Tycho-2 star catalog implementation
+├── validation_framework.py       # Performance validation and error analysis
+├── visualize.py                  # Figure generation for paper (6 figures)
+├── figures/                      # Generated visualization outputs
+├── results/                      # Monte Carlo simulation reports
 └── README.md
 ```
 
@@ -32,91 +35,108 @@ celestial_navigation/
 
 ### Core Algorithms
 
-1. **Liebe's Triangle Algorithm** - Fastest method using minimal star patterns (3+ stars)
-2. **Geometric Voting** - Robust approach with pattern consistency verification and 75% vote threshold
-3. **Pyramid Algorithm** - Most reliable lost-in-space solution with redundancy (4+ stars)
+1. **Liebe's Triangle Algorithm** — Fastest method using minimal star patterns (3+ stars); primary solver in low-noise conditions
+2. **Geometric Voting** — Robust approach with pattern consistency verification and 75% vote threshold; fallback under moderate noise
+3. **Pyramid Algorithm** — Most reliable lost-in-space (LIS) solution with high redundancy (4+ stars); final fallback
 
 ### Operational Scenarios
 
+| Scenario | FOV | Stars | Noise | Threat Actor |
+|---|---|---|---|---|
+| Baseline_Uncontested | 30° | 10 | 0.8× | None |
+| EW_Degraded_Rural | 20° | 7 | 1.0× | Russia / China |
+| Urban_C2_Denied | 10° | 4 | 1.5× | China |
+| Russian_EW_Saturation | 12° | 5 | 2.5× | Russia |
+| Chinese_ISR_Contested | 15° | 6 | 3.5× | China |
+| SOCOM_Denied_Territory | 8° | 3 | 1.2× | Near-Peer / Irregular |
 
-- **Optimal_WideField** - Clear sky, wide FOV (30°), 10 stars, low noise (0.8x)
-- **Clear_Rural_Base** - Rural/desert environment (20° FOV), 7 stars, baseline noise (1.0x)
-- **Urban_Canyon_Restricted** - Building obstructions (10° FOV), 4 stars, moderate noise (1.5x)
-- **Forest_Canopy_Obscured** - Canopy obstruction (8° FOV), 3 stars, low-moderate noise (1.2x)
-- **Dust_Storm_HighNoise** - Atmospheric degradation (12° FOV), 5 stars, high noise (2.5x)
-- **Vehicle_Motion_Extreme** - Vibration/motion blur (15° FOV), 6 stars, extreme noise (3.5x)
+### Additional Simulations
+
+**GPS-Denied Degradation (`run_gps_denied_degradation_simulation`)**
+- Models positional error growth over 60 minutes after a GPS denial event
+- Three modes: Dead Reckoning only, Celestial Navigation with periodic fixes, INS+Celestial hybrid
+- 200 Monte Carlo trajectories per scenario; outputs mean, std, and 95th percentile error curves
+
+**C2 Reintegration Latency (`run_jado_c2_latency_simulation`)**
+- Measures time-to-first-fix (TTFF) after GPS loss across all scenarios
+- Models sensor warmup, algorithm cascade time, and retry backoff
+- 500 trials per scenario; outputs mean, median, and 95th percentile TTFF
 
 ### Simulation Parameters
 
-- **Star Catalog**: Tycho-2 catalog with 535 stars
+- **Star Catalog**: Tycho-2 catalog, 535 stars
 - **Match Tolerance**: 15 arcseconds
-- **Field of View**: 8-30 degrees (scenario-dependent)
-- **Noise Levels**: 0.8x to 3.5x baseline measurement error
-- **Obscuration Probability**: 5-50% sky obstruction
+- **Field of View**: 8–30 degrees (scenario-dependent)
+- **Noise Levels**: 0.8× to 3.5× baseline measurement error
+- **Obscuration Probability**: 5–50% sky obstruction
 
 ## Requirements
 
 - Python 3.7+
-- matplotlib
-- numpy
-- astroquery
+- `numpy`
+- `scipy`
+- `matplotlib`
 
-Install dependencies:
 ```bash
-pip install matplotlib numpy astroquery
+pip install numpy scipy matplotlib
 ```
+
 ## Usage
 
-### Running the Simulation
+### Running the Full Simulation
 
-Execute the main simulation to generate Monte Carlo results:
 ```bash
 python celestial_nav_simulation.py
 ```
-This will:
 
-- Run 1000 trials for each of 6 operational scenarios
+This runs:
+- 1,000 Monte Carlo trials per scenario (6,000 total)
+- GPS degradation simulation (200 trajectories per scenario)
+- C2 latency simulation (500 trials per scenario)
+- Saves a timestamped report to `results/`
 
-- Generate comprehensive performance statistics
+### Generating All Figures
 
-- Save detailed results to timestamped files in `results/` directory
+```bash
+python visualize.py
+```
 
 ## Output Files
 
 ### Simulation Results
-- `results/monte_carlo_results_[trials]_[timestamp].txt`: Detailed statistical analysis including success rates, algorithm performance, and environmental impact assessment
+- `results/simulation_results_[timestamp].txt` — Full statistical report including success rates, attitude error with 95% CI, algorithm distribution, degradation curves, and TTFF statistics
 
-## Visualization Outputs
-- `fig1_success_rates.png`: Bar chart of success rates across scenarios
-- `fig2_algorithm_performance.png`: Stacked bar chart showing progressive strategy effectiveness
-- `fig3_environmental_analysis.png`: Multi-panel analysis of noise, star availability, and computation time impacts
-- `fig4_sensor_layout.png`: Technical diagram of vehicle-mounted sensor configuration
+### Figures
+- `fig1_success_rates.png` — Identification success rates across adversary-threat scenarios
+- `fig2_algorithm_performance.png` — Stacked bar chart showing progressive fallback strategy contribution
+- `fig3_environmental_analysis.png` — Multi-panel: noise vs. success, star availability, computation time, attitude error
+- `fig4_sensor_layout.png` — Technical diagram of vehicle-mounted sensor angular FOV
+- `fig5_gps_degradation_curve.png` — Positional error growth after GPS denial: DR vs. Celestial Nav vs. INS hybrid
+- `fig6_c2_latency.png` — Time-to-first-fix by scenario; fix success rate vs. TTFF scatter
 
 ## Key Findings
-The simulation demonstrates:
-- **Progressive Strategy Effectiveness**: Fallback algorithms provide significant additional coverage beyond primary methods
-- **Environmental Resilience**: System maintains functionality across diverse military operational environments
-- **Computational Efficiency**: All algorithms complete within milliseconds, suitable for real-time vehicle applications
-- **Operational Viability**: Overall system success rates support practical military implementation
+
+- **Progressive Strategy**: Voting and Pyramid fallbacks provide meaningful additional coverage over Liebe alone, particularly in high-noise (EW saturation) conditions
+- **Environmental Resilience**: System maintains operational viability across most scenarios; SOCOM_Denied_Territory (3 visible stars) is the binding constraint
+- **Computational Efficiency**: All algorithms complete within milliseconds — suitable for real-time embedded vehicle applications
+- **GPS Denial Impact**: Dead reckoning error grows unbounded after GPS loss; celestial nav periodic fixes bound positional error to operationally viable levels in most scenarios
+- **C2 Latency**: TTFF under 5 seconds in open/rural scenarios; rises sharply under severe sky obstruction
 
 ## Military Applications
-- GPS-denied navigation for convoy operations
-- Backup positioning in electronic warfare environments
+
+- GPS-denied navigation for convoy and logistics operations
+- Backup PNT in electronic warfare environments
 - Autonomous vehicle navigation in contested areas
-- Special operations in denied territories
+- Special operations in geographically denied territory
+- Passive navigation (no RF emissions) in emissions-controlled environments
 
 ## Research Significance
 
 This work contributes to:
 
-- Development of robust PNT alternatives for military vehicles
-- Understanding of celestial navigation limitations in ground applications
+- Development of robust passive PNT alternatives for military ground vehicles
+- Quantitative assessment of celestial navigation limitations in land-based applications
 - Algorithm optimization for real-time embedded systems
-- Environmental impact assessment for military operations
+- Empirical modeling of positional error growth under GPS denial
 
-## Future Work
 
-- Integration with inertial navigation systems
-- Machine learning enhancements for star identification
-- Real-world hardware implementation and testing
-- Extended scenarios including daytime and adverse weather operations

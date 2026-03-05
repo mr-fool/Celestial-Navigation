@@ -36,7 +36,7 @@ class EnvironmentCondition:
     description: str
     threat_actor: str        # NEW: maps to JADO adversary framing
     threat_vector: str       # NEW: specific capability being simulated
-    jado_relevance: str      # NEW: which JADO pillar this tests
+    jado_relevance: str      # doctrinal relevance note
 
 OPERATIONAL_SCENARIOS = [
     EnvironmentCondition(
@@ -351,7 +351,7 @@ def run_gps_denied_degradation_simulation(
     dr_noise_sigma = 3.0            # stochastic component per minute (m)
 
     # Celestial fix residual error after successful identification
-    # Derived from attitude RMS (~0.3°) and assumed 10 km range: ~52 m CEP
+    # Derived from attitude RMS (~0.3 degree) and assumed 10 km range: ~52 m CEP
     # Scaled by noise_level for the given scenario
     celestial_fix_residual_m = 52.0 * scenario.noise_level
 
@@ -530,7 +530,7 @@ def run_jado_c2_latency_simulation(
 
 def run_monte_carlo_simulation(num_trials=1000, verbose=False):
     print(f"\n{'='*70}")
-    print(f"MONTE CARLO SIMULATION: Celestial Navigation — JADO Ground Operations")
+    print(f"MONTE CARLO SIMULATION: Celestial Navigation for Military Ground Vehicles")
     print(f"{'='*70}")
     print(f"Trials per scenario: {num_trials}")
     print(f"Total scenarios: {len(OPERATIONAL_SCENARIOS)}")
@@ -618,8 +618,8 @@ def run_monte_carlo_simulation(num_trials=1000, verbose=False):
         }
 
         print(f"  Success Rate:       {success_rate:.1f}%")
-        print(f"  Mean Attitude Error:{mean_attitude_error:.3f}°")
-        print(f"  95% CI:             [{ci_lower:.3f}°, {ci_upper:.3f}°]")
+        print(f"  Mean Attitude Error:{mean_attitude_error:.3f} degree")
+        print(f"  95% CI:             [{ci_lower:.3f} degree, {ci_upper:.3f} degree]")
         print(f"  Avg Comp Time:      {avg_time*1000:.3f} ms")
 
     total_trials = len(all_results)
@@ -637,8 +637,8 @@ def run_monte_carlo_simulation(num_trials=1000, verbose=False):
 
     print(f"\n{'='*70}")
     print(f"OVERALL: {overall_success_rate:.1f}% success | "
-          f"Mean error: {overall_mean_error:.3f}° | "
-          f"95% CI: [{overall_ci_lower:.3f}°, {overall_ci_upper:.3f}°]")
+          f"Mean error: {overall_mean_error:.3f} degree | "
+          f"95% CI: [{overall_ci_lower:.3f} degree, {overall_ci_upper:.3f} degree]")
 
     return {
         'scenario_stats': scenario_stats,
@@ -658,7 +658,7 @@ def run_monte_carlo_simulation(num_trials=1000, verbose=False):
 # --- Main ---
 
 if __name__ == "__main__":
-    print("--- Celestial Navigation Simulator — JADO Ground Operations ---")
+    print("--- Celestial Navigation Simulator — Military Ground Vehicles ---")
     CATALOG_INDEX = build_angular_distance_index(MOCK_STAR_CATALOG)
 
     # Core Monte Carlo
@@ -680,18 +680,18 @@ if __name__ == "__main__":
 
     # JADO C2 Latency Simulation
     print(f"\n{'='*70}")
-    print("JADO C2 REINTEGRATION LATENCY (Time-to-First-Fix)")
+    print("C2 REINTEGRATION LATENCY (Time-to-First-Fix)")
     print(f"{'='*70}")
     c2_latency_results = run_jado_c2_latency_simulation(num_trials_per_scenario=500)
 
     # Save combined results
     os.makedirs('results', exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_filename = f"results/jams_paper_results_{timestamp}.txt"
+    output_filename = f"results/simulation_results_{timestamp}.txt"
     with open(output_filename, 'w') as f:
         f.write("="*70 + "\n")
-        f.write("JAMS PAPER: Celestial Navigation for JADO Ground Operations\n")
-        f.write("Fighting for the Future — GPS-Denied PNT Under Adversary EW/ISR\n")
+        f.write("Celestial Navigation for Military Ground Vehicles\n")
+        f.write("GPS-Denied PNT Under Adversary EW and ISR Conditions\n")
         f.write("="*70 + "\n\n")
         f.write(f"DATE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Total MC Trials: {mc_results['total_trials']}\n")
@@ -705,10 +705,10 @@ if __name__ == "__main__":
             f.write(f"  Threat Vector:  {s['threat_vector']}\n")
             f.write(f"  JADO Relevance: {s['jado_relevance']}\n")
             f.write(f"  Success Rate:   {s['success_rate']:.1f}%\n")
-            f.write(f"  Attitude Error: {s['mean_attitude_error']:.3f}° "
-                    f"[{s['ci_95_lower']:.3f}°, {s['ci_95_upper']:.3f}°] 95% CI\n")
+            f.write(f"  Attitude Error: {s['mean_attitude_error']:.3f} degree "
+                    f"[{s['ci_95_lower']:.3f} degree, {s['ci_95_upper']:.3f} degree] 95% CI\n")
 
-        f.write("\n\nJADO C2 REINTEGRATION LATENCY (Time-to-First-Fix)\n")
+        f.write("\n\nC2 REINTEGRATION LATENCY (Time-to-First-Fix)\n")
         f.write("-"*70 + "\n")
         for name, c in c2_latency_results.items():
             f.write(f"\n{name}\n")
