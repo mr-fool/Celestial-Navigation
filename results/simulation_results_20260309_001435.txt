@@ -1,0 +1,82 @@
+======================================================================
+Celestial Navigation for Military Ground Vehicles
+GPS-Denied PNT Under Adversary EW and ISR Conditions
+======================================================================
+
+DATE: 2026-03-09 00:14:35
+Random Seed: 42
+Total MC Trials: 6000
+Overall Success Rate: 72.7%
+
+SCENARIO RESULTS
+----------------------------------------------------------------------
+
+Baseline_Uncontested
+  Threat Actor:   None
+  Threat Vector:  Uncontested environment; GPS fully available as baseline comparison
+  Success Rate:   100.0%
+  Attitude Error: 0.131 degree [0.127 degree, 0.135 degree] 95% CI
+
+EW_Degraded_Rural
+  Threat Actor:   Russia / China
+  Threat Vector:  Persistent low-power GPS jamming at theater level
+  Success Rate:   97.3%
+  Attitude Error: 0.236 degree [0.228 degree, 0.243 degree] 95% CI
+
+Urban_C2_Denied
+  Threat Actor:   China
+  Threat Vector:  System destruction warfare: C2 node interdiction in urban terrain
+  Success Rate:   59.5%
+  Attitude Error: 0.624 degree [0.600 degree, 0.648 degree] 95% CI
+
+Russian_EW_Saturation
+  Threat Actor:   Russia
+  Threat Vector:  Krasukha/R-330 family EW saturation; GPS/GNSS denial across AO
+  Success Rate:   80.3%
+  Attitude Error: 0.820 degree [0.793 degree, 0.848 degree] 95% CI
+
+Chinese_ISR_Contested
+  Threat Actor:   China
+  Threat Vector:  Intelligentized warfare: PLA AI-enabled ISR targeting PNT nodes
+  Success Rate:   90.3%
+  Attitude Error: 0.974 degree [0.940 degree, 1.007 degree] 95% CI
+
+SOCOM_Denied_Territory
+  Threat Actor:   Near-Peer / Irregular
+  Threat Vector:  Geographically denied navigation: forest, mountain, or subterranean terrain
+  Success Rate:   8.5%
+  Attitude Error: 0.657 degree [0.590 degree, 0.725 degree] 95% CI
+
+
+C2 REINTEGRATION LATENCY (Time-to-First-Fix)
+----------------------------------------------------------------------
+
+Baseline_Uncontested
+  TTFF Mean:   2.01s
+  TTFF p95:    2.83s
+  Fix Rate:    100.0%
+
+EW_Degraded_Rural
+  TTFF Mean:   2.09s
+  TTFF p95:    2.97s
+  Fix Rate:    100.0%
+
+Urban_C2_Denied
+  TTFF Mean:   3.81s
+  TTFF p95:    8.08s
+  Fix Rate:    98.8%
+
+Russian_EW_Saturation
+  TTFF Mean:   2.56s
+  TTFF p95:    5.21s
+  Fix Rate:    100.0%
+
+Chinese_ISR_Contested
+  TTFF Mean:   2.20s
+  TTFF p95:    3.92s
+  Fix Rate:    100.0%
+
+SOCOM_Denied_Territory
+  TTFF Mean:   30.56s
+  TTFF p95:    44.04s
+  Fix Rate:    32.4%
