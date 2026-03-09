@@ -18,14 +18,11 @@ DEGREES_TO_RADIANS = math.pi / 180.0
 RADIANS_TO_DEGREES = 180.0 / math.pi
 ARCSEC_PER_DEGREE = 3600.0
 INDEX_KEY_PRECISION = 0.1
-
+RANDOM_SEED = 42
+random.seed(RANDOM_SEED)
+np.random.seed(RANDOM_SEED)
 CATALOG_INDEX: Dict[int, List[Tuple[int, int]]] = {}
 
-# ---------------------------------------------------------------------------
-# JAMS PAPER: Operational scenarios are framed as adversary-threat conditions
-# matching the JADO CFP language (Russia EW, China ISR, SOCOM denied territory).
-# Each scenario maps to a specific threat vector discussed in the paper.
-# ---------------------------------------------------------------------------
 @dataclass
 class EnvironmentCondition:
     name: str
@@ -34,9 +31,9 @@ class EnvironmentCondition:
     noise_level: float
     obscuration_prob: float
     description: str
-    threat_actor: str        # NEW: maps to JADO adversary framing
-    threat_vector: str       # NEW: specific capability being simulated
-    jado_relevance: str      # doctrinal relevance note
+    threat_actor: str
+    threat_vector: str
+    jado_relevance: str
 
 OPERATIONAL_SCENARIOS = [
     EnvironmentCondition(
@@ -70,7 +67,7 @@ OPERATIONAL_SCENARIOS = [
         description="Urban canyon with building masking — reduced sky access, moderate noise",
         threat_actor="China",
         threat_vector="System destruction warfare: C2 node interdiction in urban terrain",
-        jado_relevance="Simulates loss of C2 relay in contested urban environment (JADO C2 resilience)"
+        jado_relevance="Simulates loss of C2 relay in contested urban environment"
     ),
     EnvironmentCondition(
         name="Russian_EW_Saturation",
@@ -81,7 +78,7 @@ OPERATIONAL_SCENARIOS = [
         description="Dense EW jamming environment — high measurement noise, reduced FOV",
         threat_actor="Russia",
         threat_vector="Krasukha/R-330 family EW saturation; GPS/GNSS denial across AO",
-        jado_relevance="Direct test of JADO resilience against Russian next-gen EW doctrine"
+        jado_relevance="Direct test of resilience against Russian next-gen EW doctrine"
     ),
     EnvironmentCondition(
         name="Chinese_ISR_Contested",
@@ -92,7 +89,7 @@ OPERATIONAL_SCENARIOS = [
         description="High-vibration vehicle movement under active ISR pressure — extreme noise",
         threat_actor="China",
         threat_vector="Intelligentized warfare: PLA AI-enabled ISR targeting PNT nodes",
-        jado_relevance="Tests JADO multi-domain operations under PLA active defense pressure"
+        jado_relevance="Tests multi-domain operations under PLA active defense pressure"
     ),
     EnvironmentCondition(
         name="SOCOM_Denied_Territory",
@@ -103,7 +100,7 @@ OPERATIONAL_SCENARIOS = [
         description="Dense canopy / denied territory — severe sky obstruction, few visible stars",
         threat_actor="Near-Peer / Irregular",
         threat_vector="Geographically denied navigation: forest, mountain, or subterranean terrain",
-        jado_relevance="Special operations in GPS-denied territory; JADO persistent engagement zones"
+        jado_relevance="Special operations in GPS-denied territory; persistent engagement zones"
     ),
 ]
 
@@ -306,18 +303,7 @@ def determine_attitude_progressively(observed_stars, catalog_index, verbose=Fals
     return "Failed", f"FAILURE: All algorithms failed ({len(observed_stars)} stars)", total_time
 
 
-# ===========================================================================
-# NEW: GPS-DENIED DEGRADATION SIMULATION
-# ---------------------------------------------------------------------------
-# Models positional error growth over time in three modes:
-#   1. Dead Reckoning only (unbounded drift — baseline for adversary EW scenario)
-#   2. Celestial Navigation with periodic fixes (bounded error)
-#   3. INS + Celestial hybrid (tighter bound — future integration path)
-#
-# This is the core figure that connects the technical system to JADO doctrine:
-# without a GPS backup, ground forces lose PNT within minutes; celestial nav
-# provides a degraded but operationally viable fix capability.
-# ===========================================================================
+# --- GPS-Denied Degradation Simulation ---
 
 def run_gps_denied_degradation_simulation(
         duration_minutes: int = 60,
@@ -331,35 +317,16 @@ def run_gps_denied_degradation_simulation(
       - dead_reckoning: IMU drift only, no external fix
       - celestial_nav:  periodic celestial fixes every fix_interval_minutes
       - ins_hybrid:     tighter bound representing INS-aided celestial nav
-
-    Parameters
-    ----------
-    duration_minutes : total simulation window after GPS denial
-    fix_interval_minutes : how often a celestial fix is attempted
-    num_monte_carlo : number of independent trajectories for statistics
-    scenario : EnvironmentCondition governing fix success probability
     """
     if scenario is None:
-        scenario = OPERATIONAL_SCENARIOS[1]  # EW_Degraded_Rural default
+        scenario = OPERATIONAL_SCENARIOS[1]
 
-    # Time axis (1-minute resolution)
     time_axis = list(range(0, duration_minutes + 1))
-
-    # IMU / dead-reckoning drift model
-    # Typical military-grade IMU: 0.8 nm/hr CEP → ~13 m/min RMS error growth
-    dr_drift_rate_m_per_min = 13.0  # meters per minute (linear approximation)
-    dr_noise_sigma = 3.0            # stochastic component per minute (m)
-
-    # Celestial fix residual error after successful identification
-    # Derived from attitude RMS (~0.3 degree) and assumed 10 km range: ~52 m CEP
-    # Scaled by noise_level for the given scenario
+    dr_drift_rate_m_per_min = 13.0
+    dr_noise_sigma = 3.0
     celestial_fix_residual_m = 52.0 * scenario.noise_level
-
-    # INS-hybrid fix residual (tighter: ~20 m CEP at baseline)
     ins_hybrid_residual_m = 20.0 * scenario.noise_level
 
-    # Fix success probability for this scenario (from empirical MC results)
-    # We compute it inline from a quick sample
     quick_catalog_index = build_angular_distance_index(MOCK_STAR_CATALOG)
     fix_successes = 0
     for _ in range(50):
@@ -369,7 +336,6 @@ def run_gps_denied_degradation_simulation(
             fix_successes += 1
     fix_success_prob = fix_successes / 50.0
 
-    # Monte Carlo trajectories
     dr_trajectories = []
     cn_trajectories = []
     ins_trajectories = []
@@ -378,27 +344,21 @@ def run_gps_denied_degradation_simulation(
         dr_errors = [0.0]
         cn_errors = [0.0]
         ins_errors = [0.0]
-
         cn_current = 0.0
         ins_current = 0.0
 
         for t in range(1, duration_minutes + 1):
-            # Dead reckoning: monotonically growing error
             dr_increment = dr_drift_rate_m_per_min + random.gauss(0, dr_noise_sigma)
             dr_errors.append(dr_errors[-1] + max(0, dr_increment))
 
-            # Celestial nav: drift until next fix attempt
             cn_increment = dr_drift_rate_m_per_min * 0.9 + random.gauss(0, dr_noise_sigma)
             cn_current += max(0, cn_increment)
-
-            # Attempt a fix at scheduled intervals
             if t % fix_interval_minutes == 0:
                 if random.random() < fix_success_prob:
                     cn_current = celestial_fix_residual_m + random.gauss(0, 5.0)
                     cn_current = max(0, cn_current)
             cn_errors.append(cn_current)
 
-            # INS-hybrid: tighter residual on successful fix
             ins_increment = dr_drift_rate_m_per_min * 0.7 + random.gauss(0, dr_noise_sigma * 0.7)
             ins_current += max(0, ins_increment)
             if t % fix_interval_minutes == 0:
@@ -411,7 +371,6 @@ def run_gps_denied_degradation_simulation(
         cn_trajectories.append(cn_errors)
         ins_trajectories.append(ins_errors)
 
-    # Aggregate statistics
     def agg(traj_list):
         arr = np.array(traj_list)
         return arr.mean(axis=0), arr.std(axis=0), np.percentile(arr, 95, axis=0)
@@ -433,18 +392,7 @@ def run_gps_denied_degradation_simulation(
     }
 
 
-# ===========================================================================
-# NEW: JADO C2 REINTEGRATION LATENCY SIMULATION
-# ---------------------------------------------------------------------------
-# Measures how quickly (in seconds) the celestial nav system can provide a
-# confirmed position fix after GPS denial — the "time-to-first-fix" (TTFF)
-# after a simulated GPS loss event.
-#
-# This directly addresses the JADO C2 resilience question in the CFP:
-# how fast can ground forces re-establish a navigation fix to restore C2?
-#
-# Lower TTFF = faster C2 reintegration = higher JADO operational resilience.
-# ===========================================================================
+# --- C2 Reintegration Latency Simulation ---
 
 def run_jado_c2_latency_simulation(
         num_trials_per_scenario: int = 500) -> Dict[str, Any]:
@@ -452,22 +400,16 @@ def run_jado_c2_latency_simulation(
     Simulate time-to-first-fix (TTFF) after GPS denial across all scenarios.
 
     Models:
-      - Initial algorithm cascade (Liebe → Voting → Pyramid) computation time
+      - Initial algorithm cascade (Liebe -> Voting -> Pyramid) computation time
       - Re-acquisition delay based on number of stars visible (sensor warm-up)
       - Failure penalty: time lost before falling back to dead reckoning
-
-    Returns per-scenario TTFF statistics (mean, std, 95th percentile).
     """
     global CATALOG_INDEX
     if not CATALOG_INDEX:
         CATALOG_INDEX = build_angular_distance_index(MOCK_STAR_CATALOG)
 
-    # Sensor warm-up time model (seconds): camera stabilisation after vehicle stop
-    # or onset of GPS denial event
     SENSOR_WARMUP_BASE_S = 2.0
     SENSOR_WARMUP_NOISE_S = 0.5
-
-    # Algorithm overhead per retry attempt
     RETRY_OVERHEAD_S = 0.05
 
     results = {}
@@ -477,10 +419,7 @@ def run_jado_c2_latency_simulation(
         success_count = 0
 
         for _ in range(num_trials_per_scenario):
-            # Sensor warm-up
             warmup = max(0.5, random.gauss(SENSOR_WARMUP_BASE_S, SENSOR_WARMUP_NOISE_S))
-
-            # Attempt to get a fix (may require multiple tries)
             attempts = 0
             max_attempts = 5
             fix_time = warmup
@@ -496,14 +435,12 @@ def run_jado_c2_latency_simulation(
                     got_fix = True
                     success_count += 1
                 else:
-                    # Backoff: wait for better sky window
                     fix_time += random.uniform(1.0, 3.0)
 
             if got_fix:
                 ttff_list.append(fix_time)
             else:
-                # Record a "timeout" penalty (operationally: fall back to DR)
-                ttff_list.append(fix_time + 30.0)  # 30-second timeout penalty
+                ttff_list.append(fix_time + 30.0)
 
         ttff_arr = np.array(ttff_list)
         success_rate = success_count / num_trials_per_scenario * 100
@@ -678,7 +615,7 @@ if __name__ == "__main__":
             scenario=scenario
         )
 
-    # JADO C2 Latency Simulation
+    # C2 Reintegration Latency Simulation
     print(f"\n{'='*70}")
     print("C2 REINTEGRATION LATENCY (Time-to-First-Fix)")
     print(f"{'='*70}")
@@ -694,16 +631,16 @@ if __name__ == "__main__":
         f.write("GPS-Denied PNT Under Adversary EW and ISR Conditions\n")
         f.write("="*70 + "\n\n")
         f.write(f"DATE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        f.write(f"Random Seed: {RANDOM_SEED}\n")
         f.write(f"Total MC Trials: {mc_results['total_trials']}\n")
         f.write(f"Overall Success Rate: {mc_results['overall_success_rate']:.1f}%\n\n")
 
-        f.write("SCENARIO RESULTS (Adversary-Threat Framing)\n")
+        f.write("SCENARIO RESULTS\n")
         f.write("-"*70 + "\n")
         for name, s in mc_results['scenario_stats'].items():
             f.write(f"\n{name}\n")
             f.write(f"  Threat Actor:   {s['threat_actor']}\n")
             f.write(f"  Threat Vector:  {s['threat_vector']}\n")
-            f.write(f"  JADO Relevance: {s['jado_relevance']}\n")
             f.write(f"  Success Rate:   {s['success_rate']:.1f}%\n")
             f.write(f"  Attitude Error: {s['mean_attitude_error']:.3f} degree "
                     f"[{s['ci_95_lower']:.3f} degree, {s['ci_95_upper']:.3f} degree] 95% CI\n")
@@ -718,7 +655,6 @@ if __name__ == "__main__":
 
     print(f"\nResults saved: {output_filename}")
 
-    # Return all results for visualize.py to consume
     ALL_SIMULATION_RESULTS = {
         'mc': mc_results,
         'degradation': degradation_results,
