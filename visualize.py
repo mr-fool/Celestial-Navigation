@@ -405,7 +405,7 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
                   transform=ax_c.transAxes, fontsize=9, va='top',
                   bbox=dict(boxstyle="round", facecolor='#fde8e8', alpha=0.85))
 
-    fig.suptitle('Figure 5: Positional Error Growth After GPS Denial Event\n'
+    fig.suptitle('Figure 2: Positional Error Growth After GPS Denial Event\n'
                  'Comparison of Dead Reckoning, Celestial Navigation, and INS+Celestial Hybrid',
                  fontsize=15, fontweight='bold', y=1.01)
     fp = os.path.join(output_dir, "fig5_gps_degradation_curve.png")
@@ -443,13 +443,12 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
     colors_s  = [colors[i] for i in order]
     labels_s  = [labels[i] for i in order]
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7))
-    fig.suptitle('Figure 6: C2 Reintegration Latency — Time-to-First-Fix (TTFF) After GPS Denial\n'
+    fig, ax = plt.subplots(figsize=(14, 7))
+    fig.suptitle('Figure 3: C2 Reintegration Latency — Time-to-First-Fix (TTFF) After GPS Denial\n'
                  '(Lower TTFF = faster C2 re-establishment; 500 trials per scenario)',
                  fontsize=14, fontweight='bold', y=1.02)
 
-    # ── Left panel: TTFF bar chart with p95 overlay ──────────────────────────
-    ax = axes[0]
+    # ── Bar chart: TTFF mean and p95 by scenario ─────────────────────────────
     x = np.arange(len(labels_s))
     w = 0.35
     bars_mean   = ax.bar(x - w/2, means_s,   w, color=colors_s, alpha=0.85, edgecolor='black', label='Mean TTFF')
@@ -473,31 +472,6 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
     ax.axhline(15, color='red', linestyle='--', alpha=0.5, linewidth=1.5)
     ax.text(len(labels_s) - 0.5, 15.5, 'Notional C2\nlatency threshold\n(15s)', color='red',
             fontsize=9, ha='right')
-
-    # ── Right panel: Fix success rate vs TTFF scatter ────────────────────────
-    ax2 = axes[1]
-    for i, (name, m, fr, c, lbl) in enumerate(zip(names_s, means_s, fix_s, colors_s, labels_s)):
-        ax2.scatter(fr, m, s=220, color=c, alpha=0.85, edgecolors='black', zorder=3)
-        ax2.annotate(lbl, (fr, m), xytext=(6, 4), textcoords='offset points',
-                     fontsize=8, bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8))
-
-    ax2.set_xlabel('Fix Success Rate (%)', fontsize=12, fontweight='bold')
-    ax2.set_ylabel('Mean TTFF (seconds)', fontsize=12, fontweight='bold')
-    ax2.set_title('Fix Success Rate vs. TTFF\n(bottom-right = best C2 posture)',
-                  fontsize=12, fontweight='bold')
-    ax2.grid(True, alpha=0.3)
-    ax2.axhline(15, color='red', linestyle='--', alpha=0.4)
-    ax2.set_xlim(0, 105)
-
-    # Quadrant annotation
-    ax2.text(0.98, 0.02,
-             "Ideal: high fix rate,\n  low latency",
-             transform=ax2.transAxes, fontsize=9, ha='right', va='bottom', color='green',
-             bbox=dict(boxstyle="round", facecolor="lightgreen", alpha=0.5))
-    ax2.text(0.02, 0.98,
-             "Worst: low fix rate,\n  high latency\n  (C2 degraded)",
-             transform=ax2.transAxes, fontsize=9, ha='left', va='top', color='red',
-             bbox=dict(boxstyle="round", facecolor='#fde8e8', alpha=0.5))
 
     plt.tight_layout()
     fp = os.path.join(output_dir, "fig6_c2_latency.png")
