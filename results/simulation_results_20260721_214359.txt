@@ -1,0 +1,99 @@
+======================================================================
+Star Identification for Celestial-Aided Ground Vehicle Navigation
+Feasibility Simulation Across Sky-Visibility and Noise Conditions
+======================================================================
+
+DATE: 2026-07-21 21:43:59
+Random Seed: 42
+Total MC Trials: 6000
+Overall Success Rate: 72.7%
+
+NOTE: Scenario names below refer to the physical parameters varied
+(field of view, visible star count, angular noise). The 'illustrative
+context' line records the adversary condition that motivated testing
+that parameter range; it is NOT a calibrated model of any named system.
+
+SCENARIO RESULTS
+----------------------------------------------------------------------
+
+Open_Sky_Baseline
+  Physical description:   Clear sky, wide field of view, minimal angular noise — performance ceiling
+  Illustrative context:   Uncontested baseline; GPS fully available for comparison (not calibrated)
+  Success Rate:   100.0%
+  Attitude Error: 0.131 degree [0.127 degree, 0.135 degree] 95% CI
+  Avg Comp Time:  4.119 ms
+  Algorithm breakdown (attempts, incl. failures): {'Pyramid': 786, 'Voting': 88, 'Liebe': 126}
+
+Wide_FOV_Low_Noise
+  Physical description:   Open terrain, wide field of view, modest angular noise
+  Illustrative context:   Motivated by rural/open-terrain operations under low-level EW background conditions (not calibrated)
+  Success Rate:   97.3%
+  Attitude Error: 0.236 degree [0.228 degree, 0.243 degree] 95% CI
+  Avg Comp Time:  2.107 ms
+  Algorithm breakdown (attempts, incl. failures): {'Pyramid': 734, 'Voting': 104, 'Liebe': 135, 'Failed': 27}
+
+Moderate_Obstruction_Moderate_Noise
+  Physical description:   Reduced field of view and star count, moderate angular noise
+  Illustrative context:   Motivated by urban-canyon sky masking with moderate ambient sensor noise (not calibrated)
+  Success Rate:   59.5%
+  Attitude Error: 0.624 degree [0.600 degree, 0.648 degree] 95% CI
+  Avg Comp Time:  0.790 ms
+  Algorithm breakdown (attempts, incl. failures): {'Pyramid': 499, 'Failed': 405, 'Voting': 53, 'Liebe': 43}
+
+Narrow_FOV_High_Noise
+  Physical description:   Narrow field of view, high angular noise
+  Illustrative context:   Motivated by dense theater-level EW saturation conditions (not calibrated)
+  Success Rate:   80.3%
+  Attitude Error: 0.820 degree [0.793 degree, 0.848 degree] 95% CI
+  Avg Comp Time:  1.148 ms
+  Algorithm breakdown (attempts, incl. failures): {'Liebe': 42, 'Pyramid': 713, 'Failed': 197, 'Voting': 48}
+
+Moderate_FOV_Severe_Noise
+  Physical description:   Moderate field of view, the highest angular noise level tested
+  Illustrative context:   Motivated by high-vibration vehicle movement under active ISR pressure (not calibrated)
+  Success Rate:   90.3%
+  Attitude Error: 0.974 degree [0.940 degree, 1.007 degree] 95% CI
+  Avg Comp Time:  1.503 ms
+  Algorithm breakdown (attempts, incl. failures): {'Failed': 97, 'Pyramid': 726, 'Liebe': 84, 'Voting': 93}
+
+Severe_Sky_Obstruction
+  Physical description:   Very narrow field of view; minimum viable visible star count
+  Illustrative context:   Motivated by dense canopy, mountainous, or confined urban terrain (not calibrated)
+  Success Rate:   8.5%
+  Attitude Error: 0.657 degree [0.590 degree, 0.725 degree] 95% CI
+  Avg Comp Time:  0.538 ms
+  Algorithm breakdown (attempts, incl. failures): {'Failed': 915, 'Liebe': 54, 'Voting': 31}
+
+
+TIME-TO-FIRST-IDENTIFICATION (TTFI)
+----------------------------------------------------------------------
+
+Open_Sky_Baseline
+  TTFI Mean:   2.01s
+  TTFI p95:    2.83s
+  Fix Rate:    100.0%
+
+Wide_FOV_Low_Noise
+  TTFI Mean:   2.09s
+  TTFI p95:    2.97s
+  Fix Rate:    100.0%
+
+Moderate_Obstruction_Moderate_Noise
+  TTFI Mean:   3.81s
+  TTFI p95:    8.08s
+  Fix Rate:    98.8%
+
+Narrow_FOV_High_Noise
+  TTFI Mean:   2.56s
+  TTFI p95:    5.21s
+  Fix Rate:    100.0%
+
+Moderate_FOV_Severe_Noise
+  TTFI Mean:   2.20s
+  TTFI p95:    3.92s
+  Fix Rate:    100.0%
+
+Severe_Sky_Obstruction
+  TTFI Mean:   30.56s
+  TTFI p95:    44.04s
+  Fix Rate:    32.4%

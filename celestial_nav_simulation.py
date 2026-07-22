@@ -25,82 +25,73 @@ CATALOG_INDEX: Dict[int, List[Tuple[int, int]]] = {}
 
 @dataclass
 class EnvironmentCondition:
+    # Scenarios are named and described by the physical parameters they vary
+    # (sky visibility and angular sensor noise), not by adversary attribution.
+    # `illustrative_context` records the adversary conditions that motivated
+    # choosing this parameter range; it is NOT a calibrated model of any named
+    # system and should not be read as one. See paper Discussion section.
     name: str
     fov_size: float
     num_stars: int
     noise_level: float
     obscuration_prob: float
-    description: str
-    threat_actor: str
-    threat_vector: str
-    jado_relevance: str
+    physical_description: str
+    illustrative_context: str
 
 OPERATIONAL_SCENARIOS = [
     EnvironmentCondition(
-        name="Baseline_Uncontested",
+        name="Open_Sky_Baseline",
         fov_size=30.0,
         num_stars=10,
         noise_level=0.8,
         obscuration_prob=0.05,
-        description="Optimal conditions — clear sky, wide FOV, minimal interference",
-        threat_actor="None",
-        threat_vector="Uncontested environment; GPS fully available as baseline comparison",
-        jado_relevance="Benchmark for measuring degradation under adversary conditions"
+        physical_description="Clear sky, wide field of view, minimal angular noise — performance ceiling",
+        illustrative_context="Uncontested baseline; GPS fully available for comparison"
     ),
     EnvironmentCondition(
-        name="EW_Degraded_Rural",
+        name="Wide_FOV_Low_Noise",
         fov_size=20.0,
         num_stars=7,
         noise_level=1.0,
         obscuration_prob=0.1,
-        description="Rural/desert theater with low-level EW background noise",
-        threat_actor="Russia / China",
-        threat_vector="Persistent low-power GPS jamming at theater level",
-        jado_relevance="Tests baseline PNT resilience in GPS-degraded (not denied) conditions"
+        physical_description="Open terrain, wide field of view, modest angular noise",
+        illustrative_context="Motivated by rural/open-terrain operations under low-level EW background conditions"
     ),
     EnvironmentCondition(
-        name="Urban_C2_Denied",
+        name="Moderate_Obstruction_Moderate_Noise",
         fov_size=10.0,
         num_stars=4,
         noise_level=1.5,
         obscuration_prob=0.4,
-        description="Urban canyon with building masking — reduced sky access, moderate noise",
-        threat_actor="China",
-        threat_vector="System destruction warfare: C2 node interdiction in urban terrain",
-        jado_relevance="Simulates loss of C2 relay in contested urban environment"
+        physical_description="Reduced field of view and star count, moderate angular noise",
+        illustrative_context="Motivated by urban-canyon sky masking with moderate ambient sensor noise"
     ),
     EnvironmentCondition(
-        name="Russian_EW_Saturation",
+        name="Narrow_FOV_High_Noise",
         fov_size=12.0,
         num_stars=5,
         noise_level=2.5,
         obscuration_prob=0.3,
-        description="Dense EW jamming environment — high measurement noise, reduced FOV",
-        threat_actor="Russia",
-        threat_vector="Krasukha/R-330 family EW saturation; GPS/GNSS denial across AO",
-        jado_relevance="Direct test of resilience against Russian next-gen EW doctrine"
+        physical_description="Narrow field of view, high angular noise",
+        illustrative_context="Motivated by dense theater-level EW saturation conditions"
     ),
     EnvironmentCondition(
-        name="Chinese_ISR_Contested",
+        name="Moderate_FOV_Severe_Noise",
         fov_size=15.0,
         num_stars=6,
         noise_level=3.5,
         obscuration_prob=0.2,
-        description="High-vibration vehicle movement under active ISR pressure — extreme noise",
-        threat_actor="China",
-        threat_vector="Intelligentized warfare: PLA AI-enabled ISR targeting PNT nodes",
-        jado_relevance="Tests multi-domain operations under PLA active defense pressure"
+        physical_description="Moderate field of view, the highest angular noise level tested",
+        illustrative_context="Motivated by high-vibration vehicle movement under active ISR pressure"
     ),
     EnvironmentCondition(
-        name="SOCOM_Denied_Territory",
+        name="Severe_Sky_Obstruction",
         fov_size=8.0,
         num_stars=3,
         noise_level=1.2,
         obscuration_prob=0.5,
-        description="Dense canopy / denied territory — severe sky obstruction, few visible stars",
-        threat_actor="Near-Peer / Irregular",
-        threat_vector="Geographically denied navigation: forest, mountain, or subterranean terrain",
-        jado_relevance="Special operations in GPS-denied territory; persistent engagement zones"
+        physical_description="Very narrow field of view; minimum viable visible star count",
+        illustrative_context="Motivated by dense canopy, mountainous, or confined urban terrain"
     ),
 ]
 
@@ -394,7 +385,7 @@ def run_gps_denied_degradation_simulation(
 
 # --- C2 Reintegration Latency Simulation ---
 
-def run_jado_c2_latency_simulation(
+def run_ttfi_simulation(
         num_trials_per_scenario: int = 500) -> Dict[str, Any]:
     """
     Simulate time-to-first-fix (TTFF) after GPS denial across all scenarios.
@@ -451,12 +442,11 @@ def run_jado_c2_latency_simulation(
             'ttff_p95_s': float(np.percentile(ttff_arr, 95)),
             'ttff_median_s': float(np.median(ttff_arr)),
             'success_rate': success_rate,
-            'threat_actor': scenario.threat_actor,
-            'threat_vector': scenario.threat_vector,
-            'jado_relevance': scenario.jado_relevance,
+            'physical_description': scenario.physical_description,
+            'illustrative_context': scenario.illustrative_context,
         }
 
-        print(f"  {scenario.name:30s} TTFF mean: {ttff_arr.mean():.2f}s  "
+        print(f"  {scenario.name:30s} TTFI mean: {ttff_arr.mean():.2f}s  "
               f"p95: {np.percentile(ttff_arr, 95):.2f}s  "
               f"fix rate: {success_rate:.1f}%")
 
@@ -486,8 +476,8 @@ def run_monte_carlo_simulation(num_trials=1000, verbose=False):
 
     for scenario in OPERATIONAL_SCENARIOS:
         print(f"\nScenario: {scenario.name}")
-        print(f"  Threat Actor:  {scenario.threat_actor}")
-        print(f"  Threat Vector: {scenario.threat_vector}")
+        print(f"  Physical description:   {scenario.physical_description}")
+        print(f"  Illustrative context:   {scenario.illustrative_context} (not a calibrated model)")
         scenario_results = []
         algorithm_counts = defaultdict(int)
         success_count = 0
@@ -544,10 +534,8 @@ def run_monte_carlo_simulation(num_trials=1000, verbose=False):
             'std_computation_time': statistics.stdev(computation_times) if len(computation_times) > 1 else 0,
             'algorithm_distribution': dict(algorithm_counts),
             'total_trials': num_trials,
-            'description': scenario.description,
-            'threat_actor': scenario.threat_actor,
-            'threat_vector': scenario.threat_vector,
-            'jado_relevance': scenario.jado_relevance,
+            'physical_description': scenario.physical_description,
+            'illustrative_context': scenario.illustrative_context,
             'mean_attitude_error': mean_attitude_error,
             'ci_95_lower': ci_lower,
             'ci_95_upper': ci_upper,
@@ -603,7 +591,7 @@ if __name__ == "__main__":
 
     # GPS Degradation Simulation
     print(f"\n{'='*70}")
-    print("GPS-DENIED DEGRADATION SIMULATION")
+    print("GPS-DENIED DEGRADATION SIMULATION (illustrative, non-validated only)")
     print(f"{'='*70}")
     degradation_results = {}
     for scenario in OPERATIONAL_SCENARIOS:
@@ -617,40 +605,47 @@ if __name__ == "__main__":
 
     # C2 Reintegration Latency Simulation
     print(f"\n{'='*70}")
-    print("C2 REINTEGRATION LATENCY (Time-to-First-Fix)")
+    print("TIME-TO-FIRST-IDENTIFICATION (TTFI)")
     print(f"{'='*70}")
-    c2_latency_results = run_jado_c2_latency_simulation(num_trials_per_scenario=500)
+    ttfi_results = run_ttfi_simulation(num_trials_per_scenario=500)
 
     # Save combined results
     os.makedirs('results', exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_filename = f"results/simulation_results_{timestamp}.txt"
-    with open(output_filename, 'w') as f:
+    with open(output_filename, 'w', encoding='utf-8') as f:
         f.write("="*70 + "\n")
-        f.write("Celestial Navigation for Military Ground Vehicles\n")
-        f.write("GPS-Denied PNT Under Adversary EW and ISR Conditions\n")
+        f.write("Star Identification for Celestial-Aided Ground Vehicle Navigation\n")
+        f.write("Feasibility Simulation Across Sky-Visibility and Noise Conditions\n")
         f.write("="*70 + "\n\n")
         f.write(f"DATE: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         f.write(f"Random Seed: {RANDOM_SEED}\n")
         f.write(f"Total MC Trials: {mc_results['total_trials']}\n")
         f.write(f"Overall Success Rate: {mc_results['overall_success_rate']:.1f}%\n\n")
+        f.write("NOTE: Scenario names below refer to the physical parameters varied\n")
+        f.write("(field of view, visible star count, angular noise). The 'illustrative\n")
+        f.write("context' line records the adversary condition that motivated testing\n")
+        f.write("that parameter range; it is NOT a calibrated model of any named system.\n\n")
 
         f.write("SCENARIO RESULTS\n")
         f.write("-"*70 + "\n")
         for name, s in mc_results['scenario_stats'].items():
             f.write(f"\n{name}\n")
-            f.write(f"  Threat Actor:   {s['threat_actor']}\n")
-            f.write(f"  Threat Vector:  {s['threat_vector']}\n")
+            f.write(f"  Physical description:   {s['physical_description']}\n")
+            f.write(f"  Illustrative context:   {s['illustrative_context']} (not calibrated)\n")
             f.write(f"  Success Rate:   {s['success_rate']:.1f}%\n")
             f.write(f"  Attitude Error: {s['mean_attitude_error']:.3f} degree "
                     f"[{s['ci_95_lower']:.3f} degree, {s['ci_95_upper']:.3f} degree] 95% CI\n")
+            f.write(f"  Avg Comp Time:  {s['avg_computation_time']*1000:.3f} ms\n")
+            f.write(f"  Algorithm breakdown (attempts, incl. failures): "
+                    f"{dict(s['algorithm_distribution'])}\n")
 
-        f.write("\n\nC2 REINTEGRATION LATENCY (Time-to-First-Fix)\n")
+        f.write("\n\nTIME-TO-FIRST-IDENTIFICATION (TTFI)\n")
         f.write("-"*70 + "\n")
-        for name, c in c2_latency_results.items():
+        for name, c in ttfi_results.items():
             f.write(f"\n{name}\n")
-            f.write(f"  TTFF Mean:   {c['ttff_mean_s']:.2f}s\n")
-            f.write(f"  TTFF p95:    {c['ttff_p95_s']:.2f}s\n")
+            f.write(f"  TTFI Mean:   {c['ttff_mean_s']:.2f}s\n")
+            f.write(f"  TTFI p95:    {c['ttff_p95_s']:.2f}s\n")
             f.write(f"  Fix Rate:    {c['success_rate']:.1f}%\n")
 
     print(f"\nResults saved: {output_filename}")
@@ -658,5 +653,5 @@ if __name__ == "__main__":
     ALL_SIMULATION_RESULTS = {
         'mc': mc_results,
         'degradation': degradation_results,
-        'c2_latency': c2_latency_results,
+        'c2_latency': ttfi_results,
     }

@@ -1,11 +1,16 @@
 """
-Visualization for JAMS Paper:
-  Fig 1: Monte Carlo Success Rates by Operational Scenario
+Visualization for revised paper:
+  Fig 1: Star Identification Success Rates by Scenario
   Fig 2: Algorithm Performance and Fallback Strategy
-  Fig 3: Environmental Degradation Impact Analysis
+  Fig 3: Sky-Visibility and Noise Impact Analysis
   Fig 4: Celestial Navigation Sensor Layout Diagram
-  Fig 5: GPS-Denied Positional Error Degradation Curve  [NEW — JAMS key figure]
-  Fig 6: C2 Reintegration Latency (Time-to-First-Fix)
+  Fig 5: GPS-Denied Positional Error Degradation Curve [ILLUSTRATIVE, NON-VALIDATED — see paper Limitations]
+  Fig 6: Time-to-First-Identification (TTFI)
+
+Scenarios are named and colored according to the physical parameters they vary
+(sky visibility and angular sensor noise). Adversary framing is not used in
+figure labels; where relevant it is discussed separately, and explicitly
+caveated, in the paper text.
 """
 
 import os
@@ -23,23 +28,23 @@ plt.style.use('seaborn-v0_8-whitegrid')
 
 FIGURES_DIR = 'figures'
 
-# Consistent color palette tied to adversary framing
+# Color palette tied to physical severity (sky visibility + noise), not adversary attribution
 SCENARIO_COLORS = {
-    'Baseline_Uncontested':    '#2ecc71',  # Green  — no threat
-    'EW_Degraded_Rural':       '#3498db',  # Blue   — low threat
-    'Urban_C2_Denied':         '#f39c12',  # Orange — moderate (China)
-    'SOCOM_Denied_Territory':  '#e74c3c',  # Red    — denied territory
-    'Russian_EW_Saturation':   '#9b59b6',  # Purple — Russia EW
-    'Chinese_ISR_Contested':   '#34495e',  # Dark   — China ISR
+    'Open_Sky_Baseline':                   '#2ecc71',  # Green  — performance ceiling
+    'Wide_FOV_Low_Noise':                  '#3498db',  # Blue   — mild degradation
+    'Moderate_Obstruction_Moderate_Noise': '#f39c12',  # Orange — moderate degradation
+    'Severe_Sky_Obstruction':              '#e74c3c',  # Red    — worst sky access
+    'Narrow_FOV_High_Noise':               '#9b59b6',  # Purple — high noise, reduced FOV
+    'Moderate_FOV_Severe_Noise':           '#34495e',  # Dark   — highest noise tested
 }
 
-THREAT_LABELS = {
-    'Baseline_Uncontested':    'Uncontested',
-    'EW_Degraded_Rural':       'EW Degraded\n(Russia/China)',
-    'Urban_C2_Denied':         'Urban C2\nDenied (China)',
-    'SOCOM_Denied_Territory':  'SOCOM\nDenied Territory',
-    'Russian_EW_Saturation':   'Russian EW\nSaturation',
-    'Chinese_ISR_Contested':   'Chinese ISR\nContested',
+SCENARIO_LABELS = {
+    'Open_Sky_Baseline':                   'Open-Sky\nBaseline',
+    'Wide_FOV_Low_Noise':                  'Wide-FOV\nLow-Noise',
+    'Moderate_Obstruction_Moderate_Noise': 'Moderate\nObstruction',
+    'Severe_Sky_Obstruction':              'Severe Sky\nObstruction',
+    'Narrow_FOV_High_Noise':               'Narrow-FOV\nHigh-Noise',
+    'Moderate_FOV_Severe_Noise':           'Moderate-FOV\nSevere-Noise',
 }
 
 # ---------------------------------------------------------------------------
@@ -74,13 +79,13 @@ def run_all_simulations():
             scenario=scenario
         )
 
-    print("\nRunning C2 latency simulation...")
-    c2_latency_results = sim.run_jado_c2_latency_simulation(num_trials_per_scenario=500)
+    print("\nRunning time-to-first-identification simulation...")
+    ttfi_results = sim.run_ttfi_simulation(num_trials_per_scenario=500)
 
     return {
         'mc': mc_results,
         'degradation': degradation_results,
-        'c2_latency': c2_latency_results,
+        'ttfi_results': ttfi_results,
         'scenarios': sim.OPERATIONAL_SCENARIOS,
     }
 
@@ -91,7 +96,7 @@ def run_all_simulations():
 def generate_success_rates_chart(scenario_stats, output_dir=FIGURES_DIR):
     os.makedirs(output_dir, exist_ok=True)
     sorted_scenarios = sorted(scenario_stats.items(), key=lambda x: x[1]['success_rate'], reverse=True)
-    labels = [THREAT_LABELS.get(n, n) for n, _ in sorted_scenarios]
+    labels = [SCENARIO_LABELS.get(n, n) for n, _ in sorted_scenarios]
     rates  = [s['success_rate'] for _, s in sorted_scenarios]
     colors = [SCENARIO_COLORS.get(n, '#95a5a6') for n, _ in sorted_scenarios]
 
@@ -102,8 +107,8 @@ def generate_success_rates_chart(scenario_stats, output_dir=FIGURES_DIR):
                 f'{rate:.1f}%', ha='center', va='bottom', fontweight='bold', fontsize=11)
 
     ax.set_ylabel('Identification Success Rate (%)', fontsize=13, fontweight='bold')
-    ax.set_xlabel('Operational Scenario (Adversary Threat Framing)', fontsize=13, fontweight='bold')
-    ax.set_title('Figure 1: Star Identification Success Rates Across Adversary Threat Scenarios\n'
+    ax.set_xlabel('Operational Scenario (Sky Visibility / Noise Level)', fontsize=13, fontweight='bold')
+    ax.set_title('Figure 1: Star Identification Success Rates by Scenario\n'
                  '(1,000 Monte Carlo Trials per Scenario, Progressive Liebe → Voting → Pyramid Strategy)',
                  fontsize=14, fontweight='bold', pad=16)
     ax.set_ylim(0, 108)
@@ -123,7 +128,7 @@ def generate_success_rates_chart(scenario_stats, output_dir=FIGURES_DIR):
 def generate_algorithm_performance_chart(scenario_stats, output_dir=FIGURES_DIR):
     os.makedirs(output_dir, exist_ok=True)
     sorted_scenarios = sorted(scenario_stats.items(), key=lambda x: x[1]['success_rate'], reverse=True)
-    labels = [THREAT_LABELS.get(n, n) for n, _ in sorted_scenarios]
+    labels = [SCENARIO_LABELS.get(n, n) for n, _ in sorted_scenarios]
     liebe_d, voting_d, pyramid_d, failed_d = [], [], [], []
     for name, stats in sorted_scenarios:
         total = stats['total_trials']
@@ -152,7 +157,7 @@ def generate_algorithm_performance_chart(scenario_stats, output_dir=FIGURES_DIR)
     ax.set_xticks(x)
     ax.set_xticklabels(labels, fontsize=10)
     ax.set_ylabel('Percentage of Trials (%)', fontsize=13, fontweight='bold')
-    ax.set_xlabel('Operational Scenario (Adversary Threat)', fontsize=13, fontweight='bold')
+    ax.set_xlabel('Operational Scenario (Sky Visibility / Noise Level)', fontsize=13, fontweight='bold')
     ax.set_title('Figure 2: Algorithm Contribution and Progressive Fallback Strategy\n'
                  '(Liebe → Voting → Pyramid; stacked = cumulative success)',
                  fontsize=14, fontweight='bold', pad=16)
@@ -178,12 +183,12 @@ def generate_algorithm_performance_chart(scenario_stats, output_dir=FIGURES_DIR)
 def generate_environmental_analysis_chart(scenario_stats, output_dir=FIGURES_DIR):
     os.makedirs(output_dir, exist_ok=True)
     scenario_params = {
-        'Baseline_Uncontested':   {'noise': 0.8, 'stars': 10},
-        'EW_Degraded_Rural':      {'noise': 1.0, 'stars': 7},
-        'Urban_C2_Denied':        {'noise': 1.5, 'stars': 4},
-        'SOCOM_Denied_Territory': {'noise': 1.2, 'stars': 3},
-        'Russian_EW_Saturation':  {'noise': 2.5, 'stars': 5},
-        'Chinese_ISR_Contested':  {'noise': 3.5, 'stars': 6},
+        'Open_Sky_Baseline':   {'noise': 0.8, 'stars': 10},
+        'Wide_FOV_Low_Noise':      {'noise': 1.0, 'stars': 7},
+        'Moderate_Obstruction_Moderate_Noise':        {'noise': 1.5, 'stars': 4},
+        'Severe_Sky_Obstruction': {'noise': 1.2, 'stars': 3},
+        'Narrow_FOV_High_Noise':  {'noise': 2.5, 'stars': 5},
+        'Moderate_FOV_Severe_Noise':  {'noise': 3.5, 'stars': 6},
     }
     names  = list(scenario_stats.keys())
     noise  = [scenario_params[n]['noise'] for n in names]
@@ -191,10 +196,10 @@ def generate_environmental_analysis_chart(scenario_stats, output_dir=FIGURES_DIR
     rates  = [scenario_stats[n]['success_rate'] for n in names]
     colors = [SCENARIO_COLORS.get(n, '#95a5a6') for n in names]
     times  = [max(scenario_stats[n]['avg_computation_time'] * 1000, 0.01) for n in names]
-    labels = [THREAT_LABELS.get(n, n) for n in names]
+    labels = [SCENARIO_LABELS.get(n, n) for n in names]
 
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('Figure 3: Environmental & Threat-Condition Impact Analysis\n'
+    fig.suptitle('Figure 3: Sky-Visibility and Noise Impact Analysis\n'
                  'Military Vehicle Celestial Navigation Performance',
                  fontsize=15, fontweight='bold', y=0.99)
 
@@ -206,7 +211,7 @@ def generate_environmental_analysis_chart(scenario_stats, output_dir=FIGURES_DIR
         ax.annotate(lbl, (noise[i], rates[i]), xytext=(8, 8), textcoords='offset points',
                     fontsize=8, bbox=dict(boxstyle="round,pad=0.2", facecolor="white", alpha=0.8),
                     arrowprops=dict(arrowstyle="-", lw=0.8))
-    ax.set_xlabel('EW/Noise Level (×baseline 15 arcsec)', fontsize=11, fontweight='bold')
+    ax.set_xlabel('Angular Noise Level (×baseline 15 arcsec)', fontsize=11, fontweight='bold')
     ax.set_ylabel('Identification Success Rate (%)', fontsize=11, fontweight='bold')
     ax.set_title('Noise Severity vs. Success Rate\n(bubble = computation time)', fontsize=12, fontweight='bold')
     ax.set_xlim(0.5, 4.0); ax.set_ylim(0, 105)
@@ -332,28 +337,21 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
         m = res['cn_mean']
         s = res['cn_std']
         color = SCENARIO_COLORS.get(name, '#95a5a6')
-        label = THREAT_LABELS.get(name, name).replace('\n', ' ')
+        label = SCENARIO_LABELS.get(name, name).replace('\n', ' ')
         ax_a.plot(t, m, color=color, linewidth=2.0, label=label)
         ax_a.fill_between(t, m - s, m + s, color=color, alpha=0.12)
 
     ax_a.set_xlabel('Time After GPS Denial (minutes)', fontsize=12, fontweight='bold')
     ax_a.set_ylabel('Position Error (meters, CEP)', fontsize=12, fontweight='bold')
-    ax_a.set_title('Panel A — Celestial Nav Position Error After GPS Denial by Adversary Scenario\n'
+    ax_a.set_title('Panel A — Illustrative, Non-Validated Position Error After GPS Denial by Scenario\n'
                    '(shaded band = ±1 std, 200 Monte Carlo trajectories per scenario)',
                    fontsize=12, fontweight='bold')
     ax_a.legend(loc='upper left', ncol=3, fontsize=9, framealpha=0.9)
     ax_a.grid(True, alpha=0.3)
     ax_a.set_xlim(0, 60)
 
-    # Add fix-interval tick marks
-    fix_interval = list(degradation_results.values())[0]['fix_interval_minutes']
-    for t in range(fix_interval, 61, fix_interval):
-        ax_a.axvline(t, color='gray', linestyle=':', alpha=0.4, linewidth=0.8)
-    ax_a.text(fix_interval + 0.3, ax_a.get_ylim()[1] * 0.94,
-              f'↕ fix\nattempt\nevery {fix_interval}min', fontsize=8, color='gray')
-
-    # ── Panel B: DR vs CN vs INS — Best case (Baseline_Uncontested) ─────────
-    best_name = 'Baseline_Uncontested'
+    # ── Panel B: DR vs CN vs INS — Best case (Open_Sky_Baseline) ─────────
+    best_name = 'Open_Sky_Baseline'
     if best_name in degradation_results:
         ax_b = fig.add_subplot(gs[1, 0])
         res = degradation_results[best_name]
@@ -366,7 +364,7 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
                           color='#3498db', alpha=0.15)
         ax_b.plot(t, res['ins_mean'], color='#2ecc71', lw=2.0, linestyle='--',
                   label='INS + Celestial (future)')
-        ax_b.set_title(f'Panel B — {THREAT_LABELS[best_name].replace(chr(10)," ")}\n'
+        ax_b.set_title(f'Panel B — {SCENARIO_LABELS[best_name].replace(chr(10)," ")}\n'
                        'DR vs Celestial Nav vs INS Hybrid', fontsize=11, fontweight='bold')
         ax_b.set_xlabel('Time After GPS Denial (minutes)', fontsize=11)
         ax_b.set_ylabel('Position Error (meters)', fontsize=11)
@@ -378,8 +376,8 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
                   transform=ax_b.transAxes, fontsize=9, va='top',
                   bbox=dict(boxstyle="round", facecolor="lightyellow", alpha=0.85))
 
-    # ── Panel C: DR vs CN vs INS — Worst case (Russian_EW_Saturation) ───────
-    worst_name = 'Russian_EW_Saturation'
+    # ── Panel C: DR vs CN vs INS — Worst case (Narrow_FOV_High_Noise) ───────
+    worst_name = 'Narrow_FOV_High_Noise'
     if worst_name in degradation_results:
         ax_c = fig.add_subplot(gs[1, 1])
         res = degradation_results[worst_name]
@@ -392,7 +390,7 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
                           color='#3498db', alpha=0.15)
         ax_c.plot(t, res['ins_mean'], color='#9b59b6', lw=2.0, linestyle='--',
                   label='INS + Celestial (future)')
-        ax_c.set_title(f'Panel C — {THREAT_LABELS[worst_name].replace(chr(10)," ")}\n'
+        ax_c.set_title(f'Panel C — {SCENARIO_LABELS[worst_name].replace(chr(10)," ")}\n'
                        'DR vs Celestial Nav vs INS Hybrid', fontsize=11, fontweight='bold')
         ax_c.set_xlabel('Time After GPS Denial (minutes)', fontsize=11)
         ax_c.set_ylabel('Position Error (meters)', fontsize=11)
@@ -405,7 +403,7 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
                   transform=ax_c.transAxes, fontsize=9, va='top',
                   bbox=dict(boxstyle="round", facecolor='#fde8e8', alpha=0.85))
 
-    fig.suptitle('Figure 2: Positional Error Growth After GPS Denial Event\n'
+    fig.suptitle('Positional Error Growth After GPS Denial Event (Illustrative, Non-Validated)\n'
                  'Comparison of Dead Reckoning, Celestial Navigation, and INS+Celestial Hybrid',
                  fontsize=15, fontweight='bold', y=1.01)
     fp = os.path.join(output_dir, "fig5_gps_degradation_curve.png")
@@ -415,23 +413,24 @@ def generate_gps_degradation_figure(degradation_results, output_dir=FIGURES_DIR)
 
 
 # ---------------------------------------------------------------------------
-# Figure 6: C2 Reintegration Latency (Time-to-First-Fix)
+# Figure 6: Time-to-First-Identification (TTFI)
 # ---------------------------------------------------------------------------
-def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
+def generate_ttfi_figure(ttfi_results, output_dir=FIGURES_DIR):
     """
     Shows time-to-first-fix (TTFF) after GPS denial across all adversary scenarios.
-    Lower TTFF = faster C2 re-establishment.
-    This quantifies C2 reintegration speed after GPS denial.
+    Lower TTFI = faster recovery of a usable orientation solution.
+    This quantifies star-identification recovery speed after GPS denial. It is NOT a
+    measure of position-fix, timing, or C2-reintegration latency, none of which are modeled here.
     """
     os.makedirs(output_dir, exist_ok=True)
 
-    names   = list(c2_latency_results.keys())
-    means   = [c2_latency_results[n]['ttff_mean_s'] for n in names]
-    p95s    = [c2_latency_results[n]['ttff_p95_s'] for n in names]
-    medians = [c2_latency_results[n]['ttff_median_s'] for n in names]
-    fix_rates = [c2_latency_results[n]['success_rate'] for n in names]
+    names   = list(ttfi_results.keys())
+    means   = [ttfi_results[n]['ttff_mean_s'] for n in names]
+    p95s    = [ttfi_results[n]['ttff_p95_s'] for n in names]
+    medians = [ttfi_results[n]['ttff_median_s'] for n in names]
+    fix_rates = [ttfi_results[n]['success_rate'] for n in names]
     colors  = [SCENARIO_COLORS.get(n, '#95a5a6') for n in names]
-    labels  = [THREAT_LABELS.get(n, n) for n in names]
+    labels  = [SCENARIO_LABELS.get(n, n) for n in names]
 
     # Sort by mean TTFF ascending
     order = np.argsort(means)
@@ -444,8 +443,8 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
     labels_s  = [labels[i] for i in order]
 
     fig, ax = plt.subplots(figsize=(14, 7))
-    fig.suptitle('Figure 3: C2 Reintegration Latency — Time-to-First-Fix (TTFF) After GPS Denial\n'
-                 '(Lower TTFF = faster C2 re-establishment; 500 trials per scenario)',
+    fig.suptitle('Time-to-First-Identification (TTFI) After GPS Denial\n'
+                 '(Lower TTFI = faster recovery of a usable orientation solution; 500 trials per scenario)',
                  fontsize=14, fontweight='bold', y=1.02)
 
     # ── Bar chart: TTFF mean and p95 by scenario ─────────────────────────────
@@ -461,20 +460,20 @@ def generate_jado_c2_latency_figure(c2_latency_results, output_dir=FIGURES_DIR):
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels_s, fontsize=9)
-    ax.set_ylabel('Time-to-First-Fix (seconds)', fontsize=12, fontweight='bold')
-    ax.set_xlabel('Operational Scenario (Adversary Threat)', fontsize=12, fontweight='bold')
-    ax.set_title('TTFF by Adversary Scenario\n(mean vs 95th percentile)', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Time-to-First-Identification (seconds)', fontsize=12, fontweight='bold')
+    ax.set_xlabel('Operational Scenario (Sky Visibility / Noise Level)', fontsize=12, fontweight='bold')
+    ax.set_title('TTFI by Scenario\n(mean vs 95th percentile)', fontsize=12, fontweight='bold')
     ax.legend(fontsize=10, framealpha=0.9)
     ax.grid(True, axis='y', alpha=0.3)
 
-    # Add C2 threshold annotation
-    # Notional threshold: <15s for tactical C2 reintegration
+    # Add illustrative latency threshold annotation
+    # Notional threshold: <15s for a usable identification/orientation solution
     ax.axhline(15, color='red', linestyle='--', alpha=0.5, linewidth=1.5)
-    ax.text(len(labels_s) - 0.5, 15.5, 'Notional C2\nlatency threshold\n(15s)', color='red',
+    ax.text(len(labels_s) - 1.9, 15.5, 'Notional\nlatency threshold\n(15s)', color='red',
             fontsize=9, ha='right')
 
     plt.tight_layout()
-    fp = os.path.join(output_dir, "fig6_c2_latency.png")
+    fp = os.path.join(output_dir, "fig6_ttfi_latency.png")
     plt.savefig(fp, dpi=300, bbox_inches='tight')
     plt.close(fig)
     return fp
@@ -509,8 +508,8 @@ def generate_all_figures():
     figures.append(("Fig 4 — Sensor Layout",          generate_sensor_layout(fov_size)))
     print("5. Figure 5: GPS Degradation Curve...")
     figures.append(("Fig 5 — GPS Degradation Curve",  generate_gps_degradation_figure(all_data['degradation'])))
-    print("6. Figure 6: C2 Latency...")
-    figures.append(("Fig 6 — C2 Latency",        generate_jado_c2_latency_figure(all_data['c2_latency'])))
+    print("6. Figure 6: Time-to-First-Identification...")
+    figures.append(("Fig 6 — Time-to-First-Identification",        generate_ttfi_figure(all_data["ttfi_results"])))
 
     print("\n" + "="*70)
     print("GENERATION COMPLETE")
